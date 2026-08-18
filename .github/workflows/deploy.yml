@@ -9,10 +9,17 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Create rollback tag
+        run: |
+          git tag -f rollback-bec8401-pre-consolidation bec84015a86bdc5956893e1517274736ef9b5ae7
+          git push origin refs/tags/rollback-bec8401-pre-consolidation --force
 
       - name: Setup Node
         uses: actions/setup-node@v4
