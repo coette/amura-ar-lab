@@ -10,4 +10,8 @@ La versión base al iniciar el repositorio es la rama ORB 2D responsive (V2.7.2)
 
 Una vez conectado Cloudflare al repositorio, cada cambio en `main` deberá crear automáticamente una nueva implementación manteniendo la misma URL de producción.
 
-Estado: secretos de Cloudflare configurados y primer despliegue automático disparado desde GitHub Actions.
+Estado: secretos de Cloudflare configurados y despliegue automático operativo.
+
+## Versión activa de prueba
+
+ORB V2.7.2 RESPONSIVE 2D — X/Y + zoom + giro 2D con respuesta temporal acelerada.
