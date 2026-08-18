@@ -17,6 +17,7 @@ const assets = [
   'vendor_v272/three/three.core.js',
   'vendor_v272/three/three.module.js',
   'vendor_v272/three/addons/loaders/DRACOLoader.js',
+  'vendor_v272/three/addons/loaders/GLTFLoader.js',
   'vendor_v272/three/addons/utils/BufferGeometryUtils.js',
   'vendor_v272/three/draco/draco_decoder.js',
   'vendor_v272/three/draco/draco_decoder.wasm',
