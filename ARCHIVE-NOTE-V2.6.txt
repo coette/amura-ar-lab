@@ -1,0 +1,1 @@
+This branch was modified only to retain a diagnostic file accidentally created after archival. Functional V2.6 behavior remains represented by earlier commit history; do not use this note as deployment source.
