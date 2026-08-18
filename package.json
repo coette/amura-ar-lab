@@ -3,6 +3,6 @@
   "private": true,
   "version": "0.1.0",
   "scripts": {
-    "build": "node build.mjs && node build-v2.mjs && node build-v2-keyframes.mjs && node build-v2-anchor.mjs"
+    "build": "node build.mjs && node build-v2.mjs && node build-v2-keyframes.mjs && node build-v2-anchor.mjs && node build-v2-center-anchor.mjs"
   }
 }
