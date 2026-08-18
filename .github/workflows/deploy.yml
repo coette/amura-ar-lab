@@ -27,3 +27,34 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+      - name: Remove old Cloudflare Pages deployments
+        shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          # Cloudflare will refuse to delete the active production deployment.
+          # We use that fact to discover the deployment to keep, then remove all others.
+          sleep 5
+          prod_id=""
+          while :; do
+            ids=$(npx --yes wrangler@latest pages deployment list --project-name amura-engine-2 --json | jq -r '.[].Id')
+            to_delete=$(echo "$ids" | grep -v -F -x "$prod_id" | grep . || true)
+            [ -z "$to_delete" ] && { echo "Cleanup complete. Production kept: $prod_id"; break; }
+
+            while IFS= read -r id; do
+              [ -z "$id" ] && continue
+              if ! npx --yes wrangler@latest pages deployment delete "$id" --project-name amura-engine-2 --force 2>&1 | tee /tmp/wrangler-del.log | grep -q "Successfully deleted"; then
+                if grep -qi "active production deployment" /tmp/wrangler-del.log; then
+                  prod_id="$id"
+                  echo "Keeping active production deployment: $prod_id"
+                else
+                  echo "Could not delete deployment $id"
+                  cat /tmp/wrangler-del.log
+                fi
+              else
+                echo "Deleted old deployment: $id"
+              fi
+            done <<< "$to_delete"
+          done
