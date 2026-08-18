@@ -45,9 +45,6 @@ await mkdir(DIST, { recursive: true });
 
 for (const asset of assets) await download(asset);
 
-// Mientras no exista un index.html propio en GitHub, clonamos el que ya está
-// funcionando en producción. En las siguientes iteraciones ChatGPT actualizará
-// index.html directamente en el repositorio y éste pasará a ser la fuente.
 try {
   await access('index.html');
   await copyFile('index.html', `${DIST}/index.html`);
@@ -59,8 +56,7 @@ try {
   console.log('Bootstrap: usando index.html del despliegue actual');
 }
 
-// V3D V1.1 — recuperar la gestión de DMatch de la última versión 2D
-// que funcionaba en iPhone. No tocamos bancos, RANSAC, X/Y, zoom ni roll.
+// V3D — mantener el matcher con la gestión de DMatch de la última versión 2D estable.
 const indexPath = `${DIST}/index.html`;
 let html = await readFile(indexPath, 'utf8');
 const brokenKnnLifetime = 'm1.delete(); if(m2)m2.delete(); v.delete();';
@@ -69,7 +65,7 @@ const brokenFallbackLifetime = 'for(let i=0;i<mv.size();i++){const m=mv.get(i);g
 const fixedFallbackLifetime = 'for(let i=0;i<mv.size();i++){const m=mv.get(i);good.push({q:m.queryIdx,t:m.trainIdx,d:m.distance})}';
 
 if (!html.includes(brokenKnnLifetime) || !html.includes(brokenFallbackLifetime)) {
-  throw new Error('Hotfix V3D V1.1: no se encontró el matcher esperado; se aborta para no parchear otra build por accidente');
+  throw new Error('V3D: no se encontró el matcher esperado; se aborta para no parchear otra build por accidente');
 }
 
 html = html
@@ -78,25 +74,26 @@ html = html
   .replace('BUILD V3D V1 · DORSO 0/90/180 · 20260818-2015', 'BUILD V3D V1.1 · MATCHER FIX · 0/90/180')
   .replace("V3D-V1-DORSO-PERFIL-PALMA-20260818-2015", "V3D-V1.1-MATCHER-FIX-0-90-180");
 
-// V3D V1.2 — cambio único: PERFIL 90° usa el centro de la guía como watchAnchor.
-// En perfil la proyección 5-17 se comprime y la extrapolación anatómica desplaza el reloj.
-// DORSO y PALMA conservan exactamente el anchor anterior.
-const oldBankLine = "const bank={key:step.key,label:step.label,viewAngle:step.viewAngle,rect,canvas:c,casePxWork:computeInitialCasePxWork(rect),watchAnchor:computeWatchAnchorRef(rect),refs:[]};";
-const newBankLines = "const watchAnchor=step.key==='perfil'?{x:rect.w*.50,y:rect.h*.50}:computeWatchAnchorRef(rect);\n  const bank={key:step.key,label:step.label,viewAngle:step.viewAngle,rect,canvas:c,casePxWork:computeInitialCasePxWork(rect),watchAnchor,refs:[]};";
+// V3D V1.3 — cambio único de orientación:
+// la rotación DORSO/PERFIL/PALMA debe bascular el reloj sobre X.
+// Así, a 90°, la corona conserva su posición a la derecha en vez de meterse en profundidad.
+// No se modifica el watchAnchor ni el matching de ninguna de las tres memorias.
+const wrongViewAxis = 'new THREE.Vector3(0,1,0),smoothed.viewAngle||0';
+const correctViewAxis = 'new THREE.Vector3(1,0,0),smoothed.viewAngle||0';
 
-if (!html.includes(oldBankLine)) {
-  throw new Error('Hotfix V3D V1.2: no se encontró la creación de bank esperada; se aborta para no tocar otra build por accidente');
+if (!html.includes(wrongViewAxis)) {
+  throw new Error('V3D V1.3: no se encontró el eje Y de qView esperado; se aborta para no tocar otra build por accidente');
 }
 
 html = html
-  .replace(oldBankLine, newBankLines)
-  .replace('BUILD V3D V1.1 · MATCHER FIX · 0/90/180', 'BUILD V3D V1.2 · PROFILE ANCHOR · 0/90/180')
-  .replace('V3D-V1.1-MATCHER-FIX-0-90-180', 'V3D-V1.2-PROFILE-ANCHOR-0-90-180');
+  .replace(wrongViewAxis, correctViewAxis)
+  .replace('BUILD V3D V1.1 · MATCHER FIX · 0/90/180', 'BUILD V3D V1.3 · PROFILE AXIS X · 0/90/180')
+  .replace('V3D-V1.1-MATCHER-FIX-0-90-180', 'V3D-V1.3-PROFILE-AXIS-X-0-90-180');
 
 await writeFile(indexPath, html);
-console.log('Aplicado V3D V1.2: matcher estable + anchor central solo en PERFIL 90°');
+console.log('Aplicado V3D V1.3: matcher estable + rotación de vistas sobre eje X');
 
 await writeFile(`${DIST}/_headers`, `/*\n  Cache-Control: no-store, no-cache, must-revalidate\n\n/*.wasm\n  Content-Type: application/wasm\n  Cache-Control: public, max-age=31536000, immutable\n\n/*.glb\n  Cache-Control: public, max-age=31536000, immutable\n`);
 
-await writeFile(`${DIST}/BUILD.txt`, `AMURA AR V3D V1.2 PROFILE ANCHOR\nsource=${SOURCE}\ntime=${new Date().toISOString()}\n`);
+await writeFile(`${DIST}/BUILD.txt`, `AMURA AR V3D V1.3 PROFILE AXIS X\nsource=${SOURCE}\ntime=${new Date().toISOString()}\n`);
 console.log('Build terminado en dist/');
