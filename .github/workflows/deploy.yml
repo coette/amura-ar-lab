@@ -1,4 +1,4 @@
-name: Deploy AMURA AR to Cloudflare Pages
+name: Consolidate AMURA AR V2.9
 
 on:
   push:
@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  deploy:
+  consolidate:
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -19,22 +19,105 @@ jobs:
         with:
           node-version: '22'
 
-      - name: Build exact current V2.8 final HTML
+      - name: Generate exact current V2.8 dist
         run: npm run build
 
-      - name: Freeze V272 runtime assets to fixed Pages origin
-        shell: bash
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      - name: Vendor exact V272 runtime assets into repository
         run: |
-          npx --yes wrangler@latest pages project create amura-assets-v272-coette --production-branch=main || true
-          npx --yes wrangler@latest pages deploy dist --project-name=amura-assets-v272-coette --branch=main
+          rm -rf vendor_v272 models_v272
+          cp -a dist/vendor_v272 ./vendor_v272
+          cp -a dist/models_v272 ./models_v272
+          test -f vendor_v272/opencv/opencv.js
+          test -f vendor_v272/opencv/opencv.wasm
+          test -f models_v272/hand_landmarker.task
+          test -f models_v272/A1-Irontide-AR-diagnostic.glb
 
-      - name: Consolidate final HTML and remove patch chain
+      - name: Consolidate final HTML and remove regex patch chain
+        run: node consolidate-once.mjs
+
+      - name: Replace build with local-only asset copy
+        shell: bash
         run: |
-          node consolidate-once.mjs
-          node --check build.mjs
+          cat > build.mjs <<'EOF'
+          import { rm, mkdir, copyFile, cp, writeFile } from 'node:fs/promises';
+
+          const DIST='dist';
+          await rm(DIST,{recursive:true,force:true});
+          await mkdir(DIST,{recursive:true});
+          await copyFile('index.html',`${DIST}/index.html`);
+          await cp('vendor_v272',`${DIST}/vendor_v272`,{recursive:true});
+          await cp('models_v272',`${DIST}/models_v272`,{recursive:true});
+          await writeFile(`${DIST}/_headers`,`/*\n  Cache-Control: no-store, no-cache, must-revalidate\n\n/*.wasm\n  Content-Type: application/wasm\n  Cache-Control: public, max-age=31536000, immutable\n\n/*.glb\n  Cache-Control: public, max-age=31536000, immutable\n`);
+          await writeFile(`${DIST}/BUILD.txt`,`AMURA AR V2.9 PHYSICAL ANCHOR DIAGNOSTIC TOP3\nassets=repository-v272\ntime=${new Date().toISOString()}\n`);
+          console.log('Build consolidado: index.html + assets V272 versionados en el repo');
+          EOF
+
+      - name: Install permanent deploy workflow
+        shell: bash
+        run: |
+          cat > .github/workflows/deploy.yml <<'EOF'
+          name: Deploy AMURA AR to Cloudflare Pages
+
+          on:
+            push:
+              branches: [main]
+            workflow_dispatch:
+
+          jobs:
+            deploy:
+              runs-on: ubuntu-latest
+              permissions:
+                contents: read
+              steps:
+                - name: Checkout
+                  uses: actions/checkout@v4
+
+                - name: Setup Node
+                  uses: actions/setup-node@v4
+                  with:
+                    node-version: '22'
+
+                - name: Build current lab
+                  run: npm run build
+
+                - name: Deploy to existing Cloudflare Pages project
+                  run: npx --yes wrangler@latest pages deploy dist --project-name=amura-engine-2 --branch=main
+                  env:
+                    CLOUDFLARE_API_TOKEN: __DOLLAR__{{ secrets.CLOUDFLARE_API_TOKEN }}
+                    CLOUDFLARE_ACCOUNT_ID: __DOLLAR__{{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+                - name: Remove old Cloudflare Pages deployments
+                  shell: bash
+                  env:
+                    CLOUDFLARE_API_TOKEN: __DOLLAR__{{ secrets.CLOUDFLARE_API_TOKEN }}
+                    CLOUDFLARE_ACCOUNT_ID: __DOLLAR__{{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+                  run: |
+                    sleep 5
+                    prod_id=""
+                    while :; do
+                      ids=$(npx --yes wrangler@latest pages deployment list --project-name amura-engine-2 --json | jq -r '.[].Id')
+                      to_delete=$(echo "$ids" | grep -v -F -x "$prod_id" | grep . || true)
+                      [ -z "$to_delete" ] && { echo "Cleanup complete. Production kept: $prod_id"; break; }
+                      while IFS= read -r id; do
+                        [ -z "$id" ] && continue
+                        if ! npx --yes wrangler@latest pages deployment delete "$id" --project-name amura-engine-2 --force 2>&1 | tee /tmp/wrangler-del.log | grep -q "Successfully deleted"; then
+                          if grep -qi "active production deployment" /tmp/wrangler-del.log; then
+                            prod_id="$id"
+                            echo "Keeping active production deployment: $prod_id"
+                          else
+                            echo "Could not delete deployment $id"
+                            cat /tmp/wrangler-del.log
+                          fi
+                        else
+                          echo "Deleted old deployment: $id"
+                        fi
+                      done <<< "$to_delete"
+                    done
+          EOF
+          sed -i 's/__DOLLAR__/$/g' .github/workflows/deploy.yml
+
+      - name: Validate consolidated repository build
+        run: |
           grep -q 'BUILD V2.9 · PHYSICAL ANCHOR DIAGNOSTIC · TOP3' index.html
           grep -q 'x.landmarksOk&&x.ref.n>=10' index.html
           grep -q 'casePxWork:canonicalCasePxWork' index.html
@@ -46,8 +129,15 @@ jobs:
           test ! -e build-v2-anchor.mjs
           test ! -e build-v2-center-anchor.mjs
           test ! -e consolidate-once.mjs
+          grep -q '"build": "node build.mjs"' package.json
+          grep -q "await cp('vendor_v272'" build.mjs
+          grep -q 'assets=repository-v272' build.mjs
+          rm -rf dist
+          npm run build
+          test -f dist/vendor_v272/opencv/opencv.wasm
+          test -f dist/models_v272/A1-Irontide-AR-diagnostic.glb
 
-      - name: Commit consolidated source
+      - name: Commit consolidated source and vendored assets
         shell: bash
         run: |
           git config user.name "github-actions[bot]"
