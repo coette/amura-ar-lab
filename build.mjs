@@ -120,10 +120,36 @@ html = html
   .replace('BUILD V3D V1.4 · PROFILE -90 · 0/90/180', 'BUILD V3D V1.5 · STABILITY GATE · 0/90/180')
   .replace('V3D-V1.4-PROFILE-MINUS-90-0-90-180', 'V3D-V1.5-STABILITY-GATE-0-90-180');
 
+// V3D V1.6 — consistencia temporal y pérdida rápida.
+// Un salto grande debe repetirse de forma coherente antes de aceptarse.
+// PERFIL exige 3 confirmaciones por ser la vista con menos superficie/textura estable.
+// Si no hay pose válida, el HOLD baja de 1.4 s a 0.5 s para que el reloj desaparezca al retirar la muñeca.
+const stateV15 = 'let lastViewKey=null;\nlet lastPoseGate=null;';
+const stateV16 = 'let lastViewKey=null;\nlet lastPoseGate=null;\nlet pendingPoseGate=null;\nlet pendingPoseCount=0;';
+const cleanupV15 = 'banks=[];\n  lastViewKey=null;\n  lastPoseGate=null;';
+const cleanupV16 = 'banks=[];\n  lastViewKey=null;\n  lastPoseGate=null;\n  pendingPoseGate=null;\n  pendingPoseCount=0;';
+const gateV15 = `  const p=best.pose;\n  if(lastPoseGate){\n    const jump=Math.hypot(p.cx-lastPoseGate.cx,p.cy-lastPoseGate.cy);\n    const zoomJump=Math.abs(Math.log(Math.max(p.scaleRatio,1e-6)/Math.max(lastPoseGate.scaleRatio,1e-6)));\n    const rollJump=Math.abs(Math.atan2(Math.sin(p.roll-lastPoseGate.roll),Math.cos(p.roll-lastPoseGate.roll)));\n    const viewJump=p.viewKey!==lastPoseGate.viewKey;\n    const suspicious=jump>workCanvas.width*.16||zoomJump>.28||rollJump>.55||viewJump;\n    const strong=p.inliers>=6&&p.meanErr<=5.0;\n    if(suspicious&&!strong)return{ok:false,reason:'POSE INESTABLE · '+p.inliers+' INLIERS'};\n  }\n  lastPoseGate={cx:p.cx,cy:p.cy,scaleRatio:p.scaleRatio,roll:p.roll,viewKey:p.viewKey};\n  lastViewKey=p.viewKey;\n  return best;`;
+const gateV16 = `  const p=best.pose;\n  if(lastPoseGate){\n    const jump=Math.hypot(p.cx-lastPoseGate.cx,p.cy-lastPoseGate.cy);\n    const zoomJump=Math.abs(Math.log(Math.max(p.scaleRatio,1e-6)/Math.max(lastPoseGate.scaleRatio,1e-6)));\n    const rollJump=Math.abs(Math.atan2(Math.sin(p.roll-lastPoseGate.roll),Math.cos(p.roll-lastPoseGate.roll)));\n    const viewJump=p.viewKey!==lastPoseGate.viewKey;\n    const profile=p.viewKey==='perfil';\n    const suspicious=jump>workCanvas.width*(profile?.11:.18)||zoomJump>(profile?.20:.30)||rollJump>(profile?.38:.60)||viewJump;\n    if(suspicious){\n      const closePending=pendingPoseGate&&pendingPoseGate.viewKey===p.viewKey&&Math.hypot(p.cx-pendingPoseGate.cx,p.cy-pendingPoseGate.cy)<workCanvas.width*.09&&Math.abs(Math.log(Math.max(p.scaleRatio,1e-6)/Math.max(pendingPoseGate.scaleRatio,1e-6)))<.16&&Math.abs(Math.atan2(Math.sin(p.roll-pendingPoseGate.roll),Math.cos(p.roll-pendingPoseGate.roll)))<.30;\n      if(closePending)pendingPoseCount++;else{pendingPoseGate={cx:p.cx,cy:p.cy,scaleRatio:p.scaleRatio,roll:p.roll,viewKey:p.viewKey};pendingPoseCount=1}\n      const needed=profile?3:2;\n      if(pendingPoseCount<needed)return{ok:false,reason:(profile?'CONFIRMANDO PERFIL':'CONFIRMANDO POSE')+' · '+pendingPoseCount+'/'+needed};\n      pendingPoseGate=null;pendingPoseCount=0;\n    }else{pendingPoseGate=null;pendingPoseCount=0}\n  }\n  lastPoseGate={cx:p.cx,cy:p.cy,scaleRatio:p.scaleRatio,roll:p.roll,viewKey:p.viewKey};\n  lastViewKey=p.viewKey;\n  return best;`;
+const noCandidatesV15 = 'if(!candidates.length)return{ok:false,reason:lastReason};';
+const noCandidatesV16 = 'if(!candidates.length){pendingPoseGate=null;pendingPoseCount=0;return{ok:false,reason:lastReason}}';
+
+if (!html.includes(stateV15) || !html.includes(cleanupV15) || !html.includes(gateV15) || !html.includes(noCandidatesV15) || !html.includes('const HOLD_VALID_MS=1400;')) {
+  throw new Error('V3D V1.6: no se encontró el estado V1.5 esperado');
+}
+
+html = html
+  .replace(stateV15, stateV16)
+  .replace(cleanupV15, cleanupV16)
+  .replace(gateV15, gateV16)
+  .replace(noCandidatesV15, noCandidatesV16)
+  .replace('const HOLD_VALID_MS=1400;', 'const HOLD_VALID_MS=500;')
+  .replace('BUILD V3D V1.5 · STABILITY GATE · 0/90/180', 'BUILD V3D V1.6 · TEMPORAL STABILITY · 0/90/180')
+  .replace('V3D-V1.5-STABILITY-GATE-0-90-180', 'V3D-V1.6-TEMPORAL-STABILITY-0-90-180');
+
 await writeFile(indexPath, html);
-console.log('Aplicado V3D V1.5: matcher estable + orientación corregida + puerta de estabilidad');
+console.log('Aplicado V3D V1.6: pérdida rápida + confirmación temporal + PERFIL reforzado');
 
 await writeFile(`${DIST}/_headers`, `/*\n  Cache-Control: no-store, no-cache, must-revalidate\n\n/*.wasm\n  Content-Type: application/wasm\n  Cache-Control: public, max-age=31536000, immutable\n\n/*.glb\n  Cache-Control: public, max-age=31536000, immutable\n`);
 
-await writeFile(`${DIST}/BUILD.txt`, `AMURA AR V3D V1.5 STABILITY GATE\nsource=${SOURCE}\ntime=${new Date().toISOString()}\n`);
+await writeFile(`${DIST}/BUILD.txt`, `AMURA AR V3D V1.6 TEMPORAL STABILITY\nsource=${SOURCE}\ntime=${new Date().toISOString()}\n`);
 console.log('Build terminado en dist/');
