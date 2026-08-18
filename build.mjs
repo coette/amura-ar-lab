@@ -1,4 +1,4 @@
-import { mkdir, writeFile, copyFile, access } from 'node:fs/promises';
+import { mkdir, writeFile, copyFile, access, readFile } from 'node:fs/promises';
 import { dirname } from 'node:path';
 
 const SOURCE = process.env.ASSET_SOURCE || 'https://amura-engine-2.pages.dev';
@@ -59,7 +59,32 @@ try {
   console.log('Bootstrap: usando index.html del despliegue actual');
 }
 
+// V3D V1.1 — cambio único de laboratorio:
+// recuperar la gestión de DMatch de la última versión 2D que funcionaba en iPhone.
+// La V3D V1 empezó a borrar individualmente los DMatch devueltos por los vectores
+// de OpenCV.js. En el build que usamos eso puede romper el matcher antes de generar
+// una pose. No tocamos bancos, RANSAC, X/Y, zoom, roll ni ángulos 0/90/180.
+const indexPath = `${DIST}/index.html`;
+let html = await readFile(indexPath, 'utf8');
+const brokenKnnLifetime = 'm1.delete(); if(m2)m2.delete(); v.delete();';
+const fixedKnnLifetime = 'v.delete();';
+const brokenFallbackLifetime = 'for(let i=0;i<mv.size();i++){const m=mv.get(i);good.push({q:m.queryIdx,t:m.trainIdx,d:m.distance});m.delete()}';
+const fixedFallbackLifetime = 'for(let i=0;i<mv.size();i++){const m=mv.get(i);good.push({q:m.queryIdx,t:m.trainIdx,d:m.distance})}';
+
+if (!html.includes(brokenKnnLifetime) || !html.includes(brokenFallbackLifetime)) {
+  throw new Error('Hotfix V3D V1.1: no se encontró el matcher esperado; se aborta para no parchear otra build por accidente');
+}
+
+html = html
+  .replace(brokenKnnLifetime, fixedKnnLifetime)
+  .replace(brokenFallbackLifetime, fixedFallbackLifetime)
+  .replace('BUILD V3D V1 · DORSO 0/90/180 · 20260818-2015', 'BUILD V3D V1.1 · MATCHER FIX · 0/90/180')
+  .replace("V3D-V1-DORSO-PERFIL-PALMA-20260818-2015", "V3D-V1.1-MATCHER-FIX-0-90-180");
+
+await writeFile(indexPath, html);
+console.log('Aplicado V3D V1.1: matcher DMatch restaurado al comportamiento 2D estable');
+
 await writeFile(`${DIST}/_headers`, `/*\n  Cache-Control: no-store, no-cache, must-revalidate\n\n/*.wasm\n  Content-Type: application/wasm\n  Cache-Control: public, max-age=31536000, immutable\n\n/*.glb\n  Cache-Control: public, max-age=31536000, immutable\n`);
 
-await writeFile(`${DIST}/BUILD.txt`, `AMURA AR automatic build\nsource=${SOURCE}\ntime=${new Date().toISOString()}\n`);
+await writeFile(`${DIST}/BUILD.txt`, `AMURA AR V3D V1.1 MATCHER FIX\nsource=${SOURCE}\ntime=${new Date().toISOString()}\n`);
 console.log('Build terminado en dist/');
