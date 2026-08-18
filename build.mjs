@@ -59,11 +59,8 @@ try {
   console.log('Bootstrap: usando index.html del despliegue actual');
 }
 
-// V3D V1.1 — cambio único de laboratorio:
-// recuperar la gestión de DMatch de la última versión 2D que funcionaba en iPhone.
-// La V3D V1 empezó a borrar individualmente los DMatch devueltos por los vectores
-// de OpenCV.js. En el build que usamos eso puede romper el matcher antes de generar
-// una pose. No tocamos bancos, RANSAC, X/Y, zoom, roll ni ángulos 0/90/180.
+// V3D V1.1 — recuperar la gestión de DMatch de la última versión 2D
+// que funcionaba en iPhone. No tocamos bancos, RANSAC, X/Y, zoom ni roll.
 const indexPath = `${DIST}/index.html`;
 let html = await readFile(indexPath, 'utf8');
 const brokenKnnLifetime = 'm1.delete(); if(m2)m2.delete(); v.delete();';
@@ -81,10 +78,25 @@ html = html
   .replace('BUILD V3D V1 · DORSO 0/90/180 · 20260818-2015', 'BUILD V3D V1.1 · MATCHER FIX · 0/90/180')
   .replace("V3D-V1-DORSO-PERFIL-PALMA-20260818-2015", "V3D-V1.1-MATCHER-FIX-0-90-180");
 
+// V3D V1.2 — cambio único: PERFIL 90° usa el centro de la guía como watchAnchor.
+// En perfil la proyección 5-17 se comprime y la extrapolación anatómica desplaza el reloj.
+// DORSO y PALMA conservan exactamente el anchor anterior.
+const oldBankLine = "const bank={key:step.key,label:step.label,viewAngle:step.viewAngle,rect,canvas:c,casePxWork:computeInitialCasePxWork(rect),watchAnchor:computeWatchAnchorRef(rect),refs:[]};";
+const newBankLines = "const watchAnchor=step.key==='perfil'?{x:rect.w*.50,y:rect.h*.50}:computeWatchAnchorRef(rect);\n  const bank={key:step.key,label:step.label,viewAngle:step.viewAngle,rect,canvas:c,casePxWork:computeInitialCasePxWork(rect),watchAnchor,refs:[]};";
+
+if (!html.includes(oldBankLine)) {
+  throw new Error('Hotfix V3D V1.2: no se encontró la creación de bank esperada; se aborta para no tocar otra build por accidente');
+}
+
+html = html
+  .replace(oldBankLine, newBankLines)
+  .replace('BUILD V3D V1.1 · MATCHER FIX · 0/90/180', 'BUILD V3D V1.2 · PROFILE ANCHOR · 0/90/180')
+  .replace('V3D-V1.1-MATCHER-FIX-0-90-180', 'V3D-V1.2-PROFILE-ANCHOR-0-90-180');
+
 await writeFile(indexPath, html);
-console.log('Aplicado V3D V1.1: matcher DMatch restaurado al comportamiento 2D estable');
+console.log('Aplicado V3D V1.2: matcher estable + anchor central solo en PERFIL 90°');
 
 await writeFile(`${DIST}/_headers`, `/*\n  Cache-Control: no-store, no-cache, must-revalidate\n\n/*.wasm\n  Content-Type: application/wasm\n  Cache-Control: public, max-age=31536000, immutable\n\n/*.glb\n  Cache-Control: public, max-age=31536000, immutable\n`);
 
-await writeFile(`${DIST}/BUILD.txt`, `AMURA AR V3D V1.1 MATCHER FIX\nsource=${SOURCE}\ntime=${new Date().toISOString()}\n`);
+await writeFile(`${DIST}/BUILD.txt`, `AMURA AR V3D V1.2 PROFILE ANCHOR\nsource=${SOURCE}\ntime=${new Date().toISOString()}\n`);
 console.log('Build terminado en dist/');
