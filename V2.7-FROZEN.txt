@@ -1,0 +1,1 @@
+Functional V2.7 deployment point: commit 9665eb5532e1b6c17123ff292c452a1cc8ab01e3. Fixed DORSO-derived anchor shared across keyframes. Retained only as rollback reference.
