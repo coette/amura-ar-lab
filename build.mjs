@@ -17,7 +17,6 @@ const assets = [
   'vendor_v272/three/three.core.js',
   'vendor_v272/three/three.module.js',
   'vendor_v272/three/addons/loaders/DRACOLoader.js',
-  'vendor_v272/three/addons/loaders/GLTFLoader.js',
   'vendor_v272/three/addons/utils/BufferGeometryUtils.js',
   'vendor_v272/three/draco/draco_decoder.js',
   'vendor_v272/three/draco/draco_decoder.wasm',
@@ -74,10 +73,7 @@ html = html
   .replace('BUILD V3D V1 · DORSO 0/90/180 · 20260818-2015', 'BUILD V3D V1.1 · MATCHER FIX · 0/90/180')
   .replace("V3D-V1-DORSO-PERFIL-PALMA-20260818-2015", "V3D-V1.1-MATCHER-FIX-0-90-180");
 
-// V3D V1.3 — cambio único de orientación:
-// la rotación DORSO/PERFIL/PALMA debe bascular el reloj sobre X.
-// Así, a 90°, la corona conserva su posición a la derecha en vez de meterse en profundidad.
-// No se modifica el watchAnchor ni el matching de ninguna de las tres memorias.
+// V3D V1.3 — la rotación DORSO/PERFIL/PALMA bascula el reloj sobre X.
 const wrongViewAxis = 'new THREE.Vector3(0,1,0),smoothed.viewAngle||0';
 const correctViewAxis = 'new THREE.Vector3(1,0,0),smoothed.viewAngle||0';
 
@@ -90,10 +86,25 @@ html = html
   .replace('BUILD V3D V1.1 · MATCHER FIX · 0/90/180', 'BUILD V3D V1.3 · PROFILE AXIS X · 0/90/180')
   .replace('V3D-V1.1-MATCHER-FIX-0-90-180', 'V3D-V1.3-PROFILE-AXIS-X-0-90-180');
 
+// V3D V1.4 — cambio único: invertir el sentido de PERFIL 90°.
+// El eje X ya es correcto; el signo anterior dejaba cristal abajo y cierre arriba.
+// DORSO 0° y PALMA 180° permanecen intactos.
+const wrongProfileAngle = "{key:'perfil',label:'PERFIL 90°',viewAngle:Math.PI/2}";
+const correctProfileAngle = "{key:'perfil',label:'PERFIL 90°',viewAngle:-Math.PI/2}";
+
+if (!html.includes(wrongProfileAngle)) {
+  throw new Error('V3D V1.4: no se encontró PERFIL +90° esperado; se aborta para no tocar otra build por accidente');
+}
+
+html = html
+  .replace(wrongProfileAngle, correctProfileAngle)
+  .replace('BUILD V3D V1.3 · PROFILE AXIS X · 0/90/180', 'BUILD V3D V1.4 · PROFILE -90 · 0/90/180')
+  .replace('V3D-V1.3-PROFILE-AXIS-X-0-90-180', 'V3D-V1.4-PROFILE-MINUS-90-0-90-180');
+
 await writeFile(indexPath, html);
-console.log('Aplicado V3D V1.3: matcher estable + rotación de vistas sobre eje X');
+console.log('Aplicado V3D V1.4: matcher estable + eje X + PERFIL -90°');
 
 await writeFile(`${DIST}/_headers`, `/*\n  Cache-Control: no-store, no-cache, must-revalidate\n\n/*.wasm\n  Content-Type: application/wasm\n  Cache-Control: public, max-age=31536000, immutable\n\n/*.glb\n  Cache-Control: public, max-age=31536000, immutable\n`);
 
-await writeFile(`${DIST}/BUILD.txt`, `AMURA AR V3D V1.3 PROFILE AXIS X\nsource=${SOURCE}\ntime=${new Date().toISOString()}\n`);
+await writeFile(`${DIST}/BUILD.txt`, `AMURA AR V3D V1.4 PROFILE MINUS 90\nsource=${SOURCE}\ntime=${new Date().toISOString()}\n`);
 console.log('Build terminado en dist/');
