@@ -87,9 +87,7 @@ html = html
   .replace('BUILD V3D V1.1 · MATCHER FIX · 0/90/180', 'BUILD V3D V1.3 · PROFILE AXIS X · 0/90/180')
   .replace('V3D-V1.1-MATCHER-FIX-0-90-180', 'V3D-V1.3-PROFILE-AXIS-X-0-90-180');
 
-// V3D V1.4 — cambio único: invertir el sentido de PERFIL 90°.
-// El eje X ya es correcto; el signo anterior dejaba cristal abajo y cierre arriba.
-// DORSO 0° y PALMA 180° permanecen intactos.
+// V3D V1.4 — invertir el sentido de PERFIL 90°.
 const wrongProfileAngle = "{key:'perfil',label:'PERFIL 90°',viewAngle:Math.PI/2}";
 const correctProfileAngle = "{key:'perfil',label:'PERFIL 90°',viewAngle:-Math.PI/2}";
 
@@ -102,10 +100,30 @@ html = html
   .replace('BUILD V3D V1.3 · PROFILE AXIS X · 0/90/180', 'BUILD V3D V1.4 · PROFILE -90 · 0/90/180')
   .replace('V3D-V1.3-PROFILE-AXIS-X-0-90-180', 'V3D-V1.4-PROFILE-MINUS-90-0-90-180');
 
+// V3D V1.5 — puerta de estabilidad para coincidencias débiles.
+// Los movimientos normales siguen entrando; solo rechazamos saltos bruscos si ORB tiene poca evidencia.
+const oldLastView = 'let lastViewKey=null;';
+const newLastView = 'let lastViewKey=null;\nlet lastPoseGate=null;';
+const oldCleanup = 'banks=[];\n  lastViewKey=null;';
+const newCleanup = 'banks=[];\n  lastViewKey=null;\n  lastPoseGate=null;';
+const oldBestReturn = `  candidates.sort((a,b)=>b.score-a.score);\n  let best=candidates[0];\n  if(lastViewKey&&best.pose.viewKey!==lastViewKey){const current=candidates.find(c=>c.pose.viewKey===lastViewKey);if(current&&current.score>best.score-1.8)best=current}\n  lastViewKey=best.pose.viewKey;\n  return best;`;
+const newBestReturn = `  candidates.sort((a,b)=>b.score-a.score);\n  let best=candidates[0];\n  if(lastViewKey&&best.pose.viewKey!==lastViewKey){const current=candidates.find(c=>c.pose.viewKey===lastViewKey);if(current&&current.score>best.score-1.8)best=current}\n  const p=best.pose;\n  if(lastPoseGate){\n    const jump=Math.hypot(p.cx-lastPoseGate.cx,p.cy-lastPoseGate.cy);\n    const zoomJump=Math.abs(Math.log(Math.max(p.scaleRatio,1e-6)/Math.max(lastPoseGate.scaleRatio,1e-6)));\n    const rollJump=Math.abs(Math.atan2(Math.sin(p.roll-lastPoseGate.roll),Math.cos(p.roll-lastPoseGate.roll)));\n    const viewJump=p.viewKey!==lastPoseGate.viewKey;\n    const suspicious=jump>workCanvas.width*.16||zoomJump>.28||rollJump>.55||viewJump;\n    const strong=p.inliers>=6&&p.meanErr<=5.0;\n    if(suspicious&&!strong)return{ok:false,reason:'POSE INESTABLE · '+p.inliers+' INLIERS'};\n  }\n  lastPoseGate={cx:p.cx,cy:p.cy,scaleRatio:p.scaleRatio,roll:p.roll,viewKey:p.viewKey};\n  lastViewKey=p.viewKey;\n  return best;`;
+
+if (!html.includes(oldLastView) || !html.includes(oldCleanup) || !html.includes(oldBestReturn)) {
+  throw new Error('V3D V1.5: no se encontró el bloque esperado para la puerta de estabilidad');
+}
+
+html = html
+  .replace(oldLastView, newLastView)
+  .replace(oldCleanup, newCleanup)
+  .replace(oldBestReturn, newBestReturn)
+  .replace('BUILD V3D V1.4 · PROFILE -90 · 0/90/180', 'BUILD V3D V1.5 · STABILITY GATE · 0/90/180')
+  .replace('V3D-V1.4-PROFILE-MINUS-90-0-90-180', 'V3D-V1.5-STABILITY-GATE-0-90-180');
+
 await writeFile(indexPath, html);
-console.log('Aplicado V3D V1.4: matcher estable + eje X + PERFIL -90°');
+console.log('Aplicado V3D V1.5: matcher estable + orientación corregida + puerta de estabilidad');
 
 await writeFile(`${DIST}/_headers`, `/*\n  Cache-Control: no-store, no-cache, must-revalidate\n\n/*.wasm\n  Content-Type: application/wasm\n  Cache-Control: public, max-age=31536000, immutable\n\n/*.glb\n  Cache-Control: public, max-age=31536000, immutable\n`);
 
-await writeFile(`${DIST}/BUILD.txt`, `AMURA AR V3D V1.4 PROFILE MINUS 90\nsource=${SOURCE}\ntime=${new Date().toISOString()}\n`);
+await writeFile(`${DIST}/BUILD.txt`, `AMURA AR V3D V1.5 STABILITY GATE\nsource=${SOURCE}\ntime=${new Date().toISOString()}\n`);
 console.log('Build terminado en dist/');
