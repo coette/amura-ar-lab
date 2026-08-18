@@ -1,0 +1,1 @@
+V2.8 diagnostic: each ORB keyframe uses the geometric center of its own ROI as watch anchor. No MediaPipe-derived anchor and no anchor inherited from DORSO. If screen-position jumps remain, multikeyframe similarity is not a stable source of watch position and this branch should be abandoned for positioning.
