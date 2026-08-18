@@ -9,7 +9,7 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -19,7 +19,7 @@ jobs:
         with:
           node-version: '22'
 
-      - name: Build current lab
+      - name: Build exact current V2.8 final HTML
         run: npm run build
 
       - name: Freeze V272 runtime assets to fixed Pages origin
@@ -33,39 +33,33 @@ jobs:
           fi
           npx --yes wrangler@latest pages deploy dist --project-name=amura-assets-v272-coette --branch=main
 
-      - name: Deploy to existing Cloudflare Pages project
+      - name: Consolidate final HTML and remove patch chain
+        run: |
+          node consolidate-once.mjs
+          node --check build.mjs
+          grep -q 'BUILD V2.9 · PHYSICAL ANCHOR DIAGNOSTIC · TOP3' index.html
+          grep -q 'x.landmarksOk&&x.ref.n>=10' index.html
+          grep -q 'casePxWork:canonicalCasePxWork' index.html
+          grep -q 'watchAnchor:f.watchAnchor' index.html
+          grep -q 'score:T.inliers\*7-T.meanErr\*2.2' index.html
+          grep -q 'const topCandidates=candidates.slice(0,3)' index.html
+          test ! -e build-v2.mjs
+          test ! -e build-v2-keyframes.mjs
+          test ! -e build-v2-anchor.mjs
+          test ! -e build-v2-center-anchor.mjs
+          test ! -e consolidate-once.mjs
+
+      - name: Commit consolidated source
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Consolidate V2.9 physical anchor diagnostic"
+          git push origin HEAD:main
+
+      - name: Deploy consolidated diagnostic
         run: npx --yes wrangler@latest pages deploy dist --project-name=amura-engine-2 --branch=main
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-
-      - name: Remove old Cloudflare Pages deployments
-        shell: bash
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: |
-          # Cloudflare will refuse to delete the active production deployment.
-          # We use that fact to discover the deployment to keep, then remove all others.
-          sleep 5
-          prod_id=""
-          while :; do
-            ids=$(npx --yes wrangler@latest pages deployment list --project-name amura-engine-2 --json | jq -r '.[].Id')
-            to_delete=$(echo "$ids" | grep -v -F -x "$prod_id" | grep . || true)
-            [ -z "$to_delete" ] && { echo "Cleanup complete. Production kept: $prod_id"; break; }
-
-            while IFS= read -r id; do
-              [ -z "$id" ] && continue
-              if ! npx --yes wrangler@latest pages deployment delete "$id" --project-name amura-engine-2 --force 2>&1 | tee /tmp/wrangler-del.log | grep -q "Successfully deleted"; then
-                if grep -qi "active production deployment" /tmp/wrangler-del.log; then
-                  prod_id="$id"
-                  echo "Keeping active production deployment: $prod_id"
-                else
-                  echo "Could not delete deployment $id"
-                  cat /tmp/wrangler-del.log
-                fi
-              else
-                echo "Deleted old deployment: $id"
-              fi
-            done <<< "$to_delete"
-          done
