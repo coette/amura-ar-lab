@@ -1,7 +1,8 @@
 import { tuning } from "./tuner.js?v=11.2";
 
 // AR-03 · control mínimo de la muñeca virtual.
-// Conserva todo el tuner antiguo oculto; aquí solo exponemos lo que usamos ahora.
+// Este botón SOLO cambia la muñeca. La visibilidad/posición del reloj la
+// gobierna exclusivamente X RELOJ.
 const STORAGE_KEY = "amura.tuning.v112";
 const MODES = ["OFF", "TRANSPARENTE", "SÓLIDA", "OCLUSIÓN"];
 
@@ -19,22 +20,14 @@ function readSavedMode() {
   }
 }
 
-function persistState() {
+function persistMode() {
   try {
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
     saved.occluderMode = tuning.occluderMode;
-    // En AR-03 el reloj debe estar siempre visible. El antiguo tuner podía
-    // haber dejado watchVisible=0 guardado durante una calibración anterior.
-    saved.watchVisible = 1;
     localStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
   } catch (error) {
     /* modo privado */
   }
-}
-
-function forceWatchVisible() {
-  tuning.watchVisible = 1;
-  persistState();
 }
 
 function syncButton() {
@@ -48,18 +41,13 @@ function syncButton() {
 }
 
 readSavedMode();
-forceWatchVisible();
 syncButton();
-
-// initTuner() carga el localStorage desde hand-tracking.js. Reafirmamos el
-// reloj visible después de que todos los módulos hayan terminado de arrancar.
-window.addEventListener("load", forceWatchVisible, { once: true });
 
 if (button) {
   button.addEventListener("click", () => {
     const current = Math.max(0, Math.min(3, Math.round(Number(tuning.occluderMode) || 0)));
     tuning.occluderMode = (current + 1) % 4;
-    forceWatchVisible();
+    persistMode();
     syncButton();
   });
 }
