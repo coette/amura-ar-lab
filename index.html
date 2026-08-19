@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
 <meta name="theme-color" content="#050505">
-<title>AMURA · ORB V2.9 · PHYSICAL ANCHOR DIAGNOSTIC</title>
+<title>AMURA · ORB 3D V1.7 · DORSO PERFIL PALMA</title>
 <style>
 :root{color-scheme:dark;--ok:#8BFFB0}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -34,32 +34,25 @@ button:disabled{opacity:.45}
 @keyframes fl{0%{opacity:.32}100%{opacity:0}}
 
 #buildBadge{position:absolute;z-index:60;left:10px;top:calc(max(8px,env(safe-area-inset-top)) + 4px);padding:7px 10px;border-radius:8px;background:rgba(0,0,0,.82);border:1px solid rgba(255,255,255,.7);font:700 12px/1 -apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif;letter-spacing:.04em;color:#fff;pointer-events:none}
-#scanProgress{position:absolute;z-index:55;left:50%;top:calc(max(12px,env(safe-area-inset-top)) + 82px);transform:translateX(-50%);width:min(86vw,480px);display:none;pointer-events:none;text-shadow:0 2px 10px rgba(0,0,0,.9)}
-#scanLabels{display:flex;justify-content:space-between;align-items:center;font-size:10px;font-weight:800;letter-spacing:.08em;margin-bottom:7px;color:rgba(255,255,255,.92)}
-#scanTrack{position:relative;height:8px;border-radius:999px;background:rgba(255,255,255,.22);border:1px solid rgba(255,255,255,.38);overflow:visible}
-#scanFill{position:absolute;left:0;top:0;bottom:0;width:0;border-radius:999px;background:#fff}
-#scanDot{position:absolute;top:50%;left:0;width:18px;height:18px;border-radius:50%;transform:translate(-50%,-50%);background:#b078ff;border:2px solid #fff;box-shadow:0 2px 12px rgba(0,0,0,.8)}
-#scanStatus{text-align:center;margin-top:7px;font-size:12px;font-weight:800;letter-spacing:.08em}
 </style>
 </head>
 <body>
 <div id="stage">
-  <div id="buildBadge">BUILD V2.9 · PHYSICAL ANCHOR DIAGNOSTIC · TOP3</div>
+  <div id="buildBadge">BUILD V3D V1.6 · TEMPORAL STABILITY · 0/90/180</div>
   <video id="video" autoplay muted playsinline></video>
   <canvas id="mpCanvas" class="overlay"></canvas>
   <canvas id="threeCanvas" class="overlay"></canvas>
   <div id="guideWrap"><div id="guideOval"></div><div id="guideCenter"></div></div>
-  <div id="top"><div id="brand">AMURA · ORB V2.9 · ANCHOR DIAGNOSTIC</div><div id="subtitle">DORSO arriba · pulsa ESCANEAR</div></div>
-  <div id="scanProgress"><div id="scanLabels"><span>DORSO · 0°</span><span>PERFIL · 90°</span><span>PALMA · 180°</span></div><div id="scanTrack"><div id="scanFill"></div><div id="scanDot"></div></div><div id="scanStatus">DORSO · MANTÉN</div></div>
+  <div id="top"><div id="brand">AMURA · ORB RELOCALIZATION</div><div id="subtitle">Paso 1/3 · DORSO · coloca la muñeca en la guía</div></div>
   <div id="controls">
     <button id="camBtn" class="secondary" type="button">↺</button>
     <button id="resetBtn" class="secondary hidden" type="button">REPETIR</button>
-    <button id="captureBtn" class="primary" type="button">INICIAR ESCANEO</button>
+    <button id="captureBtn" class="primary" type="button">CAPTURAR DORSO</button>
   </div>
   <div id="startOverlay">
     <div id="card">
-      <h1>Diagnóstico de ancla física · V2.9</h1>
-      <p>1 segundo DORSO, 6 segundos de giro y 1 segundo PALMA. Solo se aceptan keyframes con landmarks válidos. Al terminar se muestran los 3 mejores candidatos ORB; reloj y tríada permanecen ocultos.</p>
+      <h1>Relocalización 3D · V1</h1>
+      <p>Pon el iPhone vertical y el antebrazo horizontal, como cuando miras la hora. Después mueve el teléfono, acerca/aleja y gira en el plano.</p>
       <button id="openBtn" class="primary" style="width:100%" type="button">ABRIR CÁMARA</button>
       <div id="boot">Pulsa para abrir la cámara.</div>
     </div>
@@ -85,7 +78,7 @@ import { FilesetResolver, HandLandmarker } from "./vendor_v272/mediapipe/vision_
 import * as THREE from "./vendor_v272/three/three.module.js";
 import { GLTFLoader } from "./vendor_v272/three/addons/loaders/GLTFLoader.js";
 
-const AMURA_BUILD='V2.9-PHYSICAL-ANCHOR-TOP3-20260818';
+const AMURA_BUILD='V3D-V1.6-TEMPORAL-STABILITY-0-90-180';
 console.log('[AMURA ORB]',AMURA_BUILD);
 const video=document.getElementById('video');
 const mpCanvas=document.getElementById('mpCanvas');
@@ -114,13 +107,6 @@ const CASE_WIDTH_M=0.03985;
 const MATCH_MS=110;
 const HOLD_VALID_MS=500;
 const RESCUE_SCALES=[0.74,1.36];
-const SCAN_SAMPLE_MS=100;
-const SCAN_HOLD_START_MS=1000;
-const SCAN_MOVE_MS=6000;
-const SCAN_HOLD_END_MS=1000;
-const SCAN_TOTAL_MS=SCAN_HOLD_START_MS+SCAN_MOVE_MS+SCAN_HOLD_END_MS;
-const MAX_SCAN_FRAMES=90;
-const SWEEP_TARGETS=[0,.10,.20,.30,.38,.44,.48,.52,.56,.62,.70,.80,.90,1];
 
 let cvx=null,handLandmarker=null,stream=null,facingMode='environment';
 let latestLandmarks=null,latestWorldLandmarks=null,handSeen=false,lastVideoTime=-1,detectorBusy=false;
@@ -131,7 +117,6 @@ const CAPTURE_SEQUENCE=[
   {key:'palma',label:'PALMA 180°',viewAngle:Math.PI}
 ];
 let captureStep=0;
-let scanFrames=[],scanStart=0,lastScanSample=0,scanFinishing=false,lastBankIndex=-1;
 let banks=[];
 let orb=null,matcher=null;
 let renderer3=null,scene3=null,camera3=null,watchRoot=null,watchReady=false;
@@ -139,16 +124,19 @@ let smoothed=null;
 let lastValidAt=0;
 let lastViewKey=null;
 let lastPoseGate=null;
+let lastDiag={sceneKp:0,perBank:''};
 let pendingPoseGate=null;
 let pendingPoseCount=0;
 
 function stageRect(){return document.getElementById('stage').getBoundingClientRect()}
 function guideRect(){const s=stageRect(),g=guideWrap.getBoundingClientRect();return{x:g.left-s.left,y:g.top-s.top,w:g.width,h:g.height}}
 function updateCaptureUI(){
-  captureBtn.textContent='INICIAR ESCANEO';
-  subtitle.textContent='DORSO arriba · pulsa ESCANEAR';
+  const step=CAPTURE_SEQUENCE[captureStep];
+  if(!step)return;
+  captureBtn.textContent='CAPTURAR '+step.label;
+  const n=captureStep+1;
+  subtitle.textContent='Paso '+n+'/3 · '+step.label+' · coloca la muñeca en la guía';
 }
-
 
 function resize(){
   const r=stageRect();
@@ -275,7 +263,7 @@ async function openCamera(){
 function videoGeometry(){const sr=stageRect(),vw=video.videoWidth||1280,vh=video.videoHeight||720,scale=Math.max(sr.width/vw,sr.height/vh);return{sr,dw:vw*scale,dh:vh*scale,ox:(sr.width-vw*scale)/2,oy:(sr.height-vh*scale)/2}}
 function normToStage(x,y){const g=videoGeometry();let xx=x;if(facingMode==='user')xx=1-x;return{x:g.ox+xx*g.dw,y:g.oy+y*g.dh}}
 function drawLandmarks(){
-  const r=stageRect();mpCtx.clearRect(0,0,r.width,r.height);if((mode!=='ready'&&mode!=='scanning')||!latestLandmarks)return;
+  const r=stageRect();mpCtx.clearRect(0,0,r.width,r.height);if(mode!=='ready'||!latestLandmarks)return;
   mpCtx.lineWidth=2;mpCtx.strokeStyle='rgba(176,120,255,.96)';mpCtx.lineCap='round';
   for(const[a,b]of CONNECTIONS){const p=normToStage(latestLandmarks[a].x,latestLandmarks[a].y),q=normToStage(latestLandmarks[b].x,latestLandmarks[b].y);mpCtx.beginPath();mpCtx.moveTo(p.x,p.y);mpCtx.lineTo(q.x,q.y);mpCtx.stroke()}
   mpCtx.fillStyle='rgba(225,195,255,.98)';for(const lm of latestLandmarks){const p=normToStage(lm.x,lm.y);mpCtx.beginPath();mpCtx.arc(p.x,p.y,3.2,0,Math.PI*2);mpCtx.fill()}
@@ -299,33 +287,47 @@ function stageToWork(r){const s=stageRect();return{x:r.x/s.width*workCanvas.widt
 function stagePointToWork(p){const s=stageRect();return{x:p.x/s.width*workCanvas.width,y:p.y/s.height*workCanvas.height}}
 function worldDist(a,b){return Math.hypot((a.x||0)-(b.x||0),(a.y||0)-(b.y||0),(a.z||0)-(b.z||0))}
 function computeInitialCasePxWork(rect){
-  const fallback=Math.max(20,rect.h*.90);
-  if(!latestLandmarks||!latestWorldLandmarks||latestLandmarks.length<18||latestWorldLandmarks.length<18)return fallback;
-  const p5=stagePointToWork(normToStage(latestLandmarks[5].x,latestLandmarks[5].y));
-  const p17=stagePointToWork(normToStage(latestLandmarks[17].x,latestLandmarks[17].y));
-  const px=Math.hypot(p17.x-p5.x,p17.y-p5.y);
-  const meters=worldDist(latestWorldLandmarks[5],latestWorldLandmarks[17]);
-  if(!Number.isFinite(px)||!Number.isFinite(meters)||px<8||meters<.025||meters>.14)return fallback;
+  // V1.7: la escala se mide sobre el EJE LARGO de la mano (muñeca p0 -> nudillo medio p9),
+  // no sobre la anchura de palma p5-p17. La anchura se proyecta casi a cero en PERFIL 90°,
+  // lo que hacía que la referencia de escala del banco PERFIL fuese basura o cayese al fallback.
+  // El eje largo es perpendicular al giro 0->180, así que se mantiene estable en las tres vistas.
+  const ref=Math.max(20,rect.h*.90);
+  if(!latestLandmarks||!latestWorldLandmarks||latestLandmarks.length<18||latestWorldLandmarks.length<18)return null;
+  const p0=stagePointToWork(normToStage(latestLandmarks[0].x,latestLandmarks[0].y));
+  const p9=stagePointToWork(normToStage(latestLandmarks[9].x,latestLandmarks[9].y));
+  const px=Math.hypot(p9.x-p0.x,p9.y-p0.y);
+  const meters=worldDist(latestWorldLandmarks[0],latestWorldLandmarks[9]);
+  if(!Number.isFinite(px)||!Number.isFinite(meters)||px<12||meters<.045||meters>.17)return null;
   const metric=px*(CASE_WIDTH_M/meters);
-  return Math.max(fallback*.55,Math.min(fallback*1.65,metric));
+  return Math.max(ref*.45,Math.min(ref*1.85,metric));
 }
 
 function computeWatchAnchorRef(rect){
-  const fallback={x:rect.w*.50,y:rect.h*.50};
-  if(!latestLandmarks||latestLandmarks.length<18)return fallback;
+  // V1.7: el ancla se define sobre el eje muñeca->nudillo medio (p0->p9) y se desplaza
+  // una fracción de la LONGITUD de ese eje. Antes usaba la anchura de palma p5-p17,
+  // que colapsa en PERFIL: el desplazamiento se iba a ~0 y el ancla de PERFIL acababa
+  // en un punto físico distinto al de DORSO y PALMA (o directamente en el fallback).
+  // Devuelve null si no hay landmarks fiables: NADIE captura con ancla inventada.
+  if(!latestLandmarks||latestLandmarks.length<18)return null;
   const p0=stagePointToWork(normToStage(latestLandmarks[0].x,latestLandmarks[0].y));
   const p5=stagePointToWork(normToStage(latestLandmarks[5].x,latestLandmarks[5].y));
   const p9=stagePointToWork(normToStage(latestLandmarks[9].x,latestLandmarks[9].y));
-  const p13=stagePointToWork(normToStage(latestLandmarks[13].x,latestLandmarks[13].y));
   const p17=stagePointToWork(normToStage(latestLandmarks[17].x,latestLandmarks[17].y));
-  const palm={x:(p5.x+p9.x+p13.x+p17.x)/4,y:(p5.y+p9.y+p13.y+p17.y)/4};
+  let dx=p0.x-p9.x,dy=p0.y-p9.y;
+  const handLen=Math.hypot(dx,dy);
+  if(!Number.isFinite(handLen)||handLen<12)return null;
+  dx/=handLen;dy/=handLen;
+  const a={x:p0.x+dx*handLen*.40,y:p0.y+dy*handLen*.40};
+  const ax=Math.max(0,Math.min(rect.w,a.x-rect.x));
+  const ay=Math.max(0,Math.min(rect.h,a.y-rect.y));
+  // Elipse de máscara ORB en coordenadas locales del ROI, alineada con el antebrazo.
+  // El semieje TRANSVERSAL sigue a la anchura proyectada de la palma, así que se
+  // estrecha solo cuando la muñeca se estrecha de verdad (PERFIL) en vez de tragar fondo.
   const palmWidth=Math.hypot(p17.x-p5.x,p17.y-p5.y);
-  let dx=p0.x-palm.x,dy=p0.y-palm.y;
-  const dl=Math.hypot(dx,dy);
-  if(!Number.isFinite(dl)||dl<2||!Number.isFinite(palmWidth)||palmWidth<8)return fallback;
-  dx/=dl;dy/=dl;
-  const a={x:p0.x+dx*palmWidth*.42,y:p0.y+dy*palmWidth*.42};
-  return{x:Math.max(0,Math.min(rect.w,a.x-rect.x)),y:Math.max(0,Math.min(rect.h,a.y-rect.y))};
+  const along=Math.max(14,handLen*.50);
+  const across=Math.max(10,Math.min(handLen*.55,Math.max(handLen*.20,palmWidth*.58)));
+  const ell={cx:ax,cy:ay,along,across,rot:Math.atan2(dy,dx)};
+  return{x:ax,y:ay,ellipse:ell};
 }
 
 function cleanupBanks(){
@@ -342,13 +344,22 @@ function cleanupBanks(){
   pendingPoseCount=0;
 }
 
-function buildORBReferenceFromCanvas(canvas,scale=1){
+function buildORBReferenceFromCanvas(canvas,scale=1,ellipse=null){
   const src=cvx.imread(canvas),gray=new cvx.Mat();
   cvx.cvtColor(src,gray,cvx.COLOR_RGBA2GRAY);cvx.equalizeHist(gray,gray);
   maskCanvas.width=gray.cols;maskCanvas.height=gray.rows;
   maskCtx.clearRect(0,0,maskCanvas.width,maskCanvas.height);
   maskCtx.fillStyle='#000';maskCtx.fillRect(0,0,maskCanvas.width,maskCanvas.height);
-  maskCtx.fillStyle='#fff';maskCtx.beginPath();maskCtx.ellipse(maskCanvas.width/2,maskCanvas.height/2,maskCanvas.width*.47,maskCanvas.height*.43,0,0,Math.PI*2);maskCtx.fill();
+  maskCtx.fillStyle='#fff';maskCtx.beginPath();
+  if(ellipse){
+    // V1.7: elipse pegada a la muñeca real (landmarks), no al centro del rectángulo guía.
+    // En PERFIL la muñeca ocupa mucho menos ancho que la guía; la elipse fija metía
+    // fondo de la habitación en la referencia, y esos puntos no van pegados al brazo.
+    maskCtx.ellipse(ellipse.cx*scale,ellipse.cy*scale,Math.max(6,ellipse.along*scale),Math.max(5,ellipse.across*scale),ellipse.rot,0,0,Math.PI*2);
+  }else{
+    maskCtx.ellipse(maskCanvas.width/2,maskCanvas.height/2,maskCanvas.width*.47,maskCanvas.height*.43,0,0,Math.PI*2);
+  }
+  maskCtx.fill();
   const maskRGBA=cvx.imread(maskCanvas),mask=new cvx.Mat();cvx.cvtColor(maskRGBA,mask,cvx.COLOR_RGBA2GRAY);
   const kp=new cvx.KeyPointVector(),desc=new cvx.Mat();orb.detectAndCompute(gray,mask,kp,desc);
   const n=kp.size();
@@ -358,7 +369,7 @@ function buildORBReferenceFromCanvas(canvas,scale=1){
 
 function prepareBankRefs(bank){
   bank.refs=[];
-  const primary=buildORBReferenceFromCanvas(bank.canvas,1.0);
+  const primary=buildORBReferenceFromCanvas(bank.canvas,1.0,bank.maskEllipse||null);
   if(primary.n<10||primary.desc.empty()){
     try{primary.kp.delete();primary.desc.delete()}catch(e){}
     throw new Error('Poca textura en '+bank.label);
@@ -369,90 +380,68 @@ function prepareBankRefs(bank){
     c.width=Math.max(48,Math.round(bank.rect.w*scale));
     c.height=Math.max(36,Math.round(bank.rect.h*scale));
     c.getContext('2d',{willReadFrequently:true}).drawImage(bank.canvas,0,0,bank.rect.w,bank.rect.h,0,0,c.width,c.height);
-    const r=buildORBReferenceFromCanvas(c,scale);
+    const r=buildORBReferenceFromCanvas(c,scale,bank.maskEllipse||null);
     if(r.n>=8&&!r.desc.empty())bank.refs.push({scale,kp:r.kp,desc:r.desc,n:r.n,bank});
     else{try{r.kp.delete();r.desc.delete()}catch(e){}}
   }
   return primary.n;
 }
 
-async function startSweep(){
-  if(!handSeen){subtitle.textContent='Enséñame primero la mano con DORSO arriba';return}
-  captureBtn.disabled=true;camBtn.disabled=true;
-  subtitle.textContent='Preparando ORB…';
-  await initCV();
-  cleanupBanks();
-  scanFrames=[];scanFinishing=false;lastBankIndex=-1;
-  scanStart=performance.now();lastScanSample=0;
-  mode='scanning';
-  const panel=document.getElementById('scanProgress'),fill=document.getElementById('scanFill'),dot=document.getElementById('scanDot'),status=document.getElementById('scanStatus');
-  if(panel)panel.style.display='block';if(fill)fill.style.width='0%';if(dot)dot.style.left='0%';if(status)status.textContent='DORSO · MANTÉN';
-  flash.classList.remove('go');void flash.offsetWidth;flash.classList.add('go');
-}
-
-function captureSweepFrame(now){
-  if(mode!=='scanning'||scanFrames.length>=MAX_SCAN_FRAMES)return;
+async function captureReference(){
+  if(!handSeen){subtitle.textContent='Enséñame primero la mano';return}
+  const step=CAPTURE_SEQUENCE[captureStep];
+  if(!step)return;
   drawCoverToWork();
   const r0=stageToWork(guideRect());
-  const rx=Math.max(0,Math.round(r0.x)),ry=Math.max(0,Math.round(r0.y));
+  const rx=Math.max(0,Math.round(r0.x)), ry=Math.max(0,Math.round(r0.y));
   const rw=Math.max(8,Math.min(workCanvas.width-rx,Math.round(r0.w)));
   const rh=Math.max(8,Math.min(workCanvas.height-ry,Math.round(r0.h)));
   const rect={x:rx,y:ry,w:rw,h:rh};
-  const c=document.createElement('canvas');c.width=rw;c.height=rh;
+  const c=document.createElement('canvas');
+  c.width=rw; c.height=rh;
   c.getContext('2d',{willReadFrequently:true}).drawImage(workCanvas,rx,ry,rw,rh,0,0,rw,rh);
-  const landmarksOk=!!(latestLandmarks&&latestLandmarks.length>=18&&handSeen);
-  scanFrames.push({canvas:c,rect,t:Math.max(0,now-scanStart),handSeen,landmarksOk,watchAnchor:computeWatchAnchorRef(rect),casePxWork:computeInitialCasePxWork(rect)});
-}
-
-function pickTargetFrame(raw,p,used){
-  const targetT=p<=0?650:p>=1?SCAN_HOLD_START_MS+SCAN_MOVE_MS+650:SCAN_HOLD_START_MS+p*SCAN_MOVE_MS;
-  const profile=p>=.44&&p<=.56;
-  const valid=x=>!used.has(x)&&x.landmarksOk&&x.ref.n>=10&&!x.ref.desc.empty();
-  const tightRadius=260;
-  const maxRadius=profile?560:460;
-  let pool=raw.filter(x=>valid(x)&&Math.abs(x.t-targetT)<=tightRadius);
-  if(!pool.length)pool=raw.filter(x=>valid(x)&&Math.abs(x.t-targetT)<=maxRadius);
-  if(!pool.length)return null;
-  pool.sort((a,b)=>{
-    const dtA=Math.abs(a.t-targetT),dtB=Math.abs(b.t-targetT);
-    const scoreA=a.ref.n-dtA*.08,scoreB=b.ref.n-dtB*.08;
-    return scoreB-scoreA;
-  });
-  return pool[0]||null;
-}
-
-async function finishSweep(){
-  if(mode!=='scanning')return;
-  mode='preparing';captureBtn.disabled=true;camBtn.disabled=true;
-  captureSweepFrame(performance.now());
-  const panel=document.getElementById('scanProgress');if(panel)panel.style.display='none';
-  guideWrap.style.display='none';mpCtx.clearRect(0,0,stageRect().width,stageRect().height);
-  subtitle.textContent='Preparando 14 referencias…';
-  if(scanFrames.length<30)throw new Error('Barrido incompleto');
-
-  const raw=[];
-  for(const f of scanFrames){const ref=buildORBReferenceFromCanvas(f.canvas,1);raw.push({...f,ref})}
-  const used=new Set(),selected=[];
-  for(const p of SWEEP_TARGETS){
-    const f=pickTargetFrame(raw,p,used);
-    if(!f)continue;
-    used.add(f);selected.push({f,p});
+  // V1.7: si MediaPipe no da un ancla y una escala fiables, la captura NO se acepta.
+  // Antes caía en silencio a un fallback (centro del ROI / rect.h*.90) y mezclaba
+  // convenciones entre bancos: DORSO físico, PERFIL de pantalla. De ahí los saltos.
+  const anchorRef=computeWatchAnchorRef(rect);
+  const casePxRef=computeInitialCasePxWork(rect);
+  if(!anchorRef||!casePxRef){
+    subtitle.textContent='Muñeca poco visible · repítelo más de frente';
+    return;
   }
-  if(selected.length<6)throw new Error('Solo '+selected.length+' keyframes con landmarks · mínimo 6');
-  for(const x of raw){try{x.ref.kp.delete()}catch(e){}try{x.ref.desc.delete()}catch(e){}}
-
-  banks=[];
-  const canonicalCasePxWork=selected[0].f.casePxWork;
-  for(let i=0;i<selected.length;i++){
-    const {f,p}=selected[i];
-    const deg=Math.round(p*180);
-    banks.push({key:'kf'+i,label:deg+'°',viewAngle:-Math.PI*p,bankIndex:i,rect:f.rect,canvas:f.canvas,casePxWork:canonicalCasePxWork,watchAnchor:f.watchAnchor,refs:[]});
+  const bank={key:step.key,label:step.label,viewAngle:step.viewAngle,rect,canvas:c,casePxWork:casePxRef,watchAnchor:{x:anchorRef.x,y:anchorRef.y},maskEllipse:anchorRef.ellipse,refs:[]};
+  banks.push(bank);
+  flash.classList.remove('go');void flash.offsetWidth;flash.classList.add('go');
+  captureStep++;
+  if(captureStep<CAPTURE_SEQUENCE.length){
+    const next=CAPTURE_SEQUENCE[captureStep];
+    captureBtn.textContent='CAPTURAR '+next.label;
+    subtitle.textContent=step.label+' capturado · ahora '+next.label;
+    return;
   }
-  let total=0;for(const b of banks)total+=prepareBankRefs(b);
-  scanFrames=[];mode='tracking';captureBtn.classList.add('hidden');resetBtn.classList.remove('hidden');camBtn.disabled=false;
-  subtitle.textContent='V2.9 · DIAGNÓSTICO ANCLA · '+banks.length+' KEYFRAMES · '+total+' PUNTOS';
-  smoothed=null;lastValidAt=0;lastViewKey=null;lastPoseGate=null;pendingPoseGate=null;pendingPoseCount=0;lastBankIndex=-1;lastMatch=0;
-  if(watchRoot)watchRoot.visible=false;
+  mode='preparing';
+  guideWrap.style.display='none';
+  mpCtx.clearRect(0,0,stageRect().width,stageRect().height);
+  latestLandmarks=null; latestWorldLandmarks=null; handSeen=false;
+  captureBtn.disabled=true; camBtn.disabled=true;
+  subtitle.textContent='Preparando 3 vistas ORB…';
+  try{
+    await initCV();
+    let total=0;
+    for(const b of banks) total+=prepareBankRefs(b);
+    mode='tracking';
+    captureBtn.classList.add('hidden');resetBtn.classList.remove('hidden');camBtn.disabled=false;
+    subtitle.textContent='3 VISTAS OK · '+total+' PUNTOS';
+    smoothed=null;lastValidAt=0;lastViewKey=null;if(watchRoot)watchRoot.visible=false;
+    lastMatch=0;
+  }catch(e){
+    console.error(e);
+    cleanupBanks();
+    captureStep=0;
+    mode='ready';guideWrap.style.display='block';captureBtn.disabled=false;camBtn.disabled=false;
+    subtitle.textContent=e?.message||'Error al preparar ORB';
+    updateCaptureUI();
+  }
 }
 
 function makeORB(gray){const kp=new cvx.KeyPointVector(),desc=new cvx.Mat(),mask=new cvx.Mat();orb.detectAndCompute(gray,mask,kp,desc);mask.delete();return{kp,desc}}
@@ -559,7 +548,7 @@ function matchAgainst(refEntry,sceneKp,sceneDesc){
   if(!T||T.inliers<4)return{ok:false,reason:'GEOMETRÍA DÉBIL',good:good.length};
   const bank=refEntry.bank;
   const center=applySimilarity(T,bank.watchAnchor||{x:bank.rect.w/2,y:bank.rect.h/2});
-  return{ok:true,pose:{cx:center.x,cy:center.y,scaleRatio:T.scale,roll:T.roll,inliers:T.inliers,ratio:T.ratio,meanErr:T.meanErr,refScale:refEntry.scale,baseCasePx:bank.casePxWork,viewAngle:bank.viewAngle,viewLabel:bank.label,viewKey:bank.key},good:good.length,score:T.inliers*7-T.meanErr*2.2};
+  return{ok:true,pose:{cx:center.x,cy:center.y,scaleRatio:T.scale,roll:T.roll,inliers:T.inliers,ratio:T.ratio,meanErr:T.meanErr,refScale:refEntry.scale,baseCasePx:bank.casePxWork,viewAngle:bank.viewAngle,viewLabel:bank.label,viewKey:bank.key},good:good.length,score:T.inliers*7+T.ratio*90-T.meanErr*2.2-(refEntry.scale!==1?0.8:0)};
 }
 
 function matchFrame(){
@@ -568,49 +557,56 @@ function matchFrame(){
   const src=cvx.imread(workCanvas),gray=new cvx.Mat();
   cvx.cvtColor(src,gray,cvx.COLOR_RGBA2GRAY);cvx.equalizeHist(gray,gray);src.delete();
   const {kp:sceneKp,desc:sceneDesc}=makeORB(gray);gray.delete();
-  if(sceneDesc.empty()){sceneKp.delete();sceneDesc.delete();return{ok:false,reason:'SIN TEXTURA'}}
-  let candidates=[],lastReason='NO ENCONTRADA';
+  // DIAG: puntos ORB detectados en la escena actual, para saber si a 90° hay
+  // poca textura de verdad (piel lisa) o si el problema está en otro sitio.
+  const sceneKpCount=sceneKp.size();
+  if(sceneDesc.empty()){sceneKp.delete();sceneDesc.delete();lastDiag={sceneKp:sceneKpCount,perBank:''};return{ok:false,reason:'SIN TEXTURA'}}
+  let candidates=[];let lastReason='NO ENCONTRADA';
+  const diagPerBank=[];
   for(const bank of banks){
     const primary=bank.refs.find(r=>r.scale===1.0)||bank.refs[0];
-    const r=matchAgainst(primary,sceneKp,sceneDesc);
-    if(r.ok){r.pose.bankIndex=bank.bankIndex;candidates.push(r)}else lastReason=r.reason;
-  }
-  if(!candidates.length){
-    for(const bank of banks){
+    let r=matchAgainst(primary,sceneKp,sceneDesc);
+    let bestForBank=r;
+    if(r.ok)candidates.push(r);else lastReason=r.reason;
+    if(!r.ok){
       for(const rr of bank.refs){
         if(rr.scale===1.0)continue;
-        const r=matchAgainst(rr,sceneKp,sceneDesc);
-        if(r.ok){r.pose.bankIndex=bank.bankIndex;candidates.push(r);break}else lastReason=r.reason;
+        const c=matchAgainst(rr,sceneKp,sceneDesc);
+        if(c.good>(bestForBank.good||0))bestForBank=c;
+        if(c.ok){candidates.push(c);break}
+        lastReason=c.reason;
       }
     }
+    diagPerBank.push(bank.key.slice(0,3).toUpperCase()+':'+(bestForBank.good||0)+(bestForBank.ok?'✓'+(bestForBank.pose?.inliers||0):''));
   }
   sceneKp.delete();sceneDesc.delete();
-  if(!candidates.length)return{ok:false,reason:lastReason};
+  lastDiag={sceneKp:sceneKpCount,perBank:diagPerBank.join(' ')};
+  if(!candidates.length){pendingPoseGate=null;pendingPoseCount=0;return{ok:false,reason:lastReason}}
   candidates.sort((a,b)=>b.score-a.score);
-  const topCandidates=candidates.slice(0,3);
-  lastBankIndex=topCandidates[0].pose.bankIndex;
-  return{ok:true,candidates:topCandidates};
-}
-
-function drawDiagnosticCandidates(candidates){
-  const sr=stageRect();
-  mpCtx.clearRect(0,0,sr.width,sr.height);
-  const colors=['#ff3b30','#35e06f','#2997ff'];
-  mpCtx.save();
-  mpCtx.font='700 13px -apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif';
-  mpCtx.textBaseline='middle';
-  for(let i=0;i<candidates.length;i++){
-    const p=candidates[i].pose;
-    const x=p.cx/workCanvas.width*sr.width;
-    const y=p.cy/workCanvas.height*sr.height;
-    const color=colors[i%colors.length];
-    mpCtx.fillStyle=color;mpCtx.strokeStyle='#fff';mpCtx.lineWidth=2;
-    mpCtx.beginPath();mpCtx.arc(x,y,8,0,Math.PI*2);mpCtx.fill();mpCtx.stroke();
-    const label='KF '+(p.bankIndex+1)+' · '+p.inliers+' inliers';
-    mpCtx.lineWidth=4;mpCtx.strokeStyle='rgba(0,0,0,.88)';mpCtx.strokeText(label,x+13,y);
-    mpCtx.fillStyle=color;mpCtx.fillText(label,x+13,y);
+  let best=candidates[0];
+  if(lastViewKey&&best.pose.viewKey!==lastViewKey){const current=candidates.find(c=>c.pose.viewKey===lastViewKey);if(current&&current.score>best.score-1.8)best=current}
+  const p=best.pose;
+  if(lastPoseGate){
+    const jump=Math.hypot(p.cx-lastPoseGate.cx,p.cy-lastPoseGate.cy);
+    const zoomJump=Math.abs(Math.log(Math.max(p.scaleRatio,1e-6)/Math.max(lastPoseGate.scaleRatio,1e-6)));
+    const rollJump=Math.abs(Math.atan2(Math.sin(p.roll-lastPoseGate.roll),Math.cos(p.roll-lastPoseGate.roll)));
+    const viewJump=p.viewKey!==lastPoseGate.viewKey;
+    // V1.7: PERFIL deja de estar penalizado. Los umbrales estrechos y la confirmación
+    // de 3 frames se añadieron para compensar un ancla mala; con el ancla arreglada
+    // sólo conseguían que PERFIL fuese casi imposible de alcanzar al girar.
+    const profile=p.viewKey==='perfil';
+    const suspicious=jump>workCanvas.width*.18||zoomJump>.30||rollJump>.60||viewJump;
+    if(suspicious){
+      const closePending=pendingPoseGate&&pendingPoseGate.viewKey===p.viewKey&&Math.hypot(p.cx-pendingPoseGate.cx,p.cy-pendingPoseGate.cy)<workCanvas.width*.09&&Math.abs(Math.log(Math.max(p.scaleRatio,1e-6)/Math.max(pendingPoseGate.scaleRatio,1e-6)))<.16&&Math.abs(Math.atan2(Math.sin(p.roll-pendingPoseGate.roll),Math.cos(p.roll-pendingPoseGate.roll)))<.30;
+      if(closePending)pendingPoseCount++;else{pendingPoseGate={cx:p.cx,cy:p.cy,scaleRatio:p.scaleRatio,roll:p.roll,viewKey:p.viewKey};pendingPoseCount=1}
+      const needed=2;
+      if(pendingPoseCount<needed)return{ok:false,reason:(profile?'CONFIRMANDO PERFIL':'CONFIRMANDO POSE')+' · '+pendingPoseCount+'/'+needed};
+      pendingPoseGate=null;pendingPoseCount=0;
+    }else{pendingPoseGate=null;pendingPoseCount=0}
   }
-  mpCtx.restore();
+  lastPoseGate={cx:p.cx,cy:p.cy,scaleRatio:p.scaleRatio,roll:p.roll,viewKey:p.viewKey};
+  lastViewKey=p.viewKey;
+  return best;
 }
 
 function drawWatch(p){
@@ -640,51 +636,29 @@ function drawWatch(p){
   watchRoot.visible=true;
 }
 
-function resetLab(){
-  mode='ready';cleanupBanks();captureStep=0;scanFrames=[];scanStart=0;lastScanSample=0;scanFinishing=false;lastBankIndex=-1;
-  smoothed=null;lastValidAt=0;latestLandmarks=null;latestWorldLandmarks=null;handSeen=false;lastVideoTime=-1;
-  guideWrap.style.display='block';captureBtn.classList.remove('hidden');resetBtn.classList.add('hidden');captureBtn.disabled=false;camBtn.disabled=false;
-  const panel=document.getElementById('scanProgress'),fill=document.getElementById('scanFill'),dot=document.getElementById('scanDot');if(panel)panel.style.display='none';if(fill)fill.style.width='0%';if(dot)dot.style.left='0%';
-  updateCaptureUI();if(watchRoot)watchRoot.visible=false;
-}
-
-function sweepFail(e){
-  console.error(e);cleanupBanks();mode='ready';scanFrames=[];scanFinishing=false;guideWrap.style.display='block';captureBtn.classList.remove('hidden');resetBtn.classList.add('hidden');captureBtn.disabled=false;camBtn.disabled=false;
-  const panel=document.getElementById('scanProgress');if(panel)panel.style.display='none';subtitle.textContent='ERROR V2.9 · '+(e?.message||String(e));
-}
+function resetLab(){mode='ready';cleanupBanks();captureStep=0;smoothed=null;lastValidAt=0;latestLandmarks=null;latestWorldLandmarks=null;handSeen=false;lastVideoTime=-1;guideWrap.style.display='block';captureBtn.classList.remove('hidden');resetBtn.classList.add('hidden');captureBtn.disabled=false;camBtn.disabled=false;updateCaptureUI();if(watchRoot)watchRoot.visible=false}
 
 function tick(now){
   raf=requestAnimationFrame(tick);
-  if(mode==='ready'||mode==='scanning'){detectHand(now);drawLandmarks()}else if(mode!=='tracking'){const r=stageRect();mpCtx.clearRect(0,0,r.width,r.height)}
-  if(mode==='scanning'){
-    if(now-lastScanSample>=SCAN_SAMPLE_MS){lastScanSample=now;captureSweepFrame(now)}
-    const elapsed=now-scanStart;
-    const progress=Math.max(0,Math.min(1,(elapsed-SCAN_HOLD_START_MS)/SCAN_MOVE_MS));
-    const pct=(progress*100).toFixed(1)+'%';
-    const fill=document.getElementById('scanFill'),dot=document.getElementById('scanDot'),status=document.getElementById('scanStatus');
-    if(fill)fill.style.width=pct;if(dot)dot.style.left=pct;
-    if(elapsed<SCAN_HOLD_START_MS){if(status)status.textContent='DORSO · MANTÉN';subtitle.textContent=handSeen?'DORSO · MANTÉN QUIETO':'DORSO · BUSCANDO MANO'}
-    else if(elapsed<SCAN_HOLD_START_MS+SCAN_MOVE_MS){const deg=Math.round(progress*180);if(status)status.textContent='GIRA · '+deg+'°';subtitle.textContent=handSeen?'GIRA · '+deg+'°':'GIRA · '+deg+'° · ZONA MUERTA'}
-    else{if(status)status.textContent='PALMA · MANTÉN';subtitle.textContent=handSeen?'PALMA · MANTÉN QUIETA':'PALMA · BUSCANDO MANO'}
-    if(elapsed>=SCAN_TOTAL_MS&&!scanFinishing){scanFinishing=true;finishSweep().catch(sweepFail)}
-  }
+  if(mode==='ready'){detectHand(now);drawLandmarks()}else{const r=stageRect();mpCtx.clearRect(0,0,r.width,r.height)}
   if(mode==='tracking'&&now-lastMatch>=MATCH_MS){
-    lastMatch=now;const r=matchFrame();
-    if(watchRoot)watchRoot.visible=false;
+    lastMatch=now;
+    const r=matchFrame();
     if(r&&r.ok){
-      drawDiagnosticCandidates(r.candidates);
-      const b=r.candidates[0];
-      subtitle.textContent='V2.9 · TOP3 · MEJOR KF '+(b.pose.bankIndex+1)+'/'+banks.length+' · '+b.pose.inliers+' INLIERS';
+      drawWatch(r.pose);lastValidAt=now;
+      subtitle.textContent=r.pose.viewLabel+' · '+r.pose.inliers+' INLIERS · ZOOM '+r.pose.scaleRatio.toFixed(2)+'×'+(r.pose.refScale!==1?' · RESCATE '+r.pose.refScale.toFixed(2)+'×':'')+' · ESCENA '+(lastDiag.sceneKp||0)+'kp';
     }else{
-      const sr=stageRect();mpCtx.clearRect(0,0,sr.width,sr.height);
-      subtitle.textContent=(r&&r.reason)?r.reason:'NO ENCONTRADA';
+      const reason=(r&&r.reason)?r.reason:'NO ENCONTRADA';
+      const diagTxt=reason+' · ESCENA '+(lastDiag.sceneKp||0)+'kp'+(lastDiag.perBank?(' · '+lastDiag.perBank):'');
+      if(watchRoot&&watchRoot.visible&&lastValidAt&&(now-lastValidAt)<HOLD_VALID_MS)subtitle.textContent='MANTENIENDO · '+diagTxt;
+      else{if(watchRoot)watchRoot.visible=false;subtitle.textContent=diagTxt}
     }
   }
   if(renderer3&&scene3&&camera3)renderer3.render(scene3,camera3);
 }
 
 openBtn.addEventListener('click',openCamera);
-captureBtn.addEventListener('click',()=>{if(mode!=='ready')return;startSweep().catch(sweepFail)});
+captureBtn.addEventListener('click',()=>captureReference().catch(e=>{console.error(e);subtitle.textContent='ERROR CAPTURA · '+(e?.message||String(e));captureBtn.disabled=false;camBtn.disabled=false;}));
 resetBtn.addEventListener('click',resetLab);camBtn.addEventListener('click',async()=>{facingMode=facingMode==='environment'?'user':'environment';resetLab();await openCamera()});
 document.addEventListener('visibilitychange',()=>{if(document.hidden)resetLab()});
 </script>
