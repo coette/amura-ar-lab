@@ -1,28 +1,28 @@
 /**
  * AMURA · Panel de ajuste
  *
- * Un solo grupo visible cada vez. MUÑECA dispone además de un modo de
- * calibración limpio para hacer coincidir la muñeca virtual con la real.
+ * Convención única del sistema:
+ * +X = 9 → 3 · +Y = 6 → 12 · +Z = esfera → cristal.
  */
 
 const STORAGE_KEY = "amura.tuning.v112";
 
 export const tuning = {
-  // POSICIÓN
+  // POSICIÓN GENERAL
   offsetMm: 6,
   lateralMm: -2,
+  liftMm: 2,
   // GIRO
   dialDegrees: 0,
   flexionFix: 1,
-  liftMm: 2,
   // CÁMARA
   fovDiagonal: 73,
   // FILTRO
   smoothing: 1,
   orientationCutoff: 0.55,
   orientationBeta: 1.8,
-  // MUÑECA / OCCLUDER PROCEDURAL
-  occluderMode: 1,      // 0 OFF · 1 TRANSPARENTE · 2 SÓLIDA · 3 OCLUSIÓN
+  // MUÑECA VIRTUAL
+  occluderMode: 1,
   occluderWidthMm: 62,
   occluderThicknessMm: 44,
   occluderLengthMm: 150,
@@ -32,7 +32,8 @@ export const tuning = {
   occluderRotX: 0,
   occluderRotY: 0,
   occluderRotZ: 0,
-  watchVisible: 1
+  watchVisible: 1,
+  triadMode: 0 // 0 OFF · 1 MUÑECA · 2 RELOJ
 };
 
 const GROUPS = [
@@ -54,14 +55,15 @@ const GROUPS = [
       { key: "occluderWidthMm", label: "Ancho", min: 30, max: 100, step: 1, unit: " mm" },
       { key: "occluderThicknessMm", label: "Grosor", min: 20, max: 80, step: 1, unit: " mm" },
       { key: "occluderLengthMm", label: "Largo", min: 70, max: 240, step: 2, unit: " mm" },
-      { key: "occluderXmm", label: "Mover X", min: -100, max: 100, step: 1, unit: " mm" },
-      { key: "occluderYmm", label: "Mover Y", min: -120, max: 120, step: 1, unit: " mm" },
-      { key: "occluderZmm", label: "Mover Z", min: -100, max: 100, step: 1, unit: " mm" },
+      { key: "occluderXmm", label: "Mover X (+ hacia 3)", min: -200, max: 200, step: 1, unit: " mm" },
+      { key: "occluderYmm", label: "Mover Y (+ hacia 12)", min: -200, max: 200, step: 1, unit: " mm" },
+      { key: "occluderZmm", label: "Mover Z (+ cristal)", min: -200, max: 200, step: 1, unit: " mm" },
       { key: "occluderRotX", label: "Giro X", min: -90, max: 90, step: 1, unit: "°" },
       { key: "occluderRotY", label: "Giro Y", min: -90, max: 90, step: 1, unit: "°" },
       { key: "occluderRotZ", label: "Giro Z", min: -90, max: 90, step: 1, unit: "°" },
       { key: "occluderMode", label: "Aspecto / función", choices: ["OFF", "TRANSPARENTE", "SÓLIDA", "OCLUSIÓN"] },
-      { key: "watchVisible", label: "Reloj", choices: ["OCULTAR RELOJ", "MOSTRAR RELOJ"] }
+      { key: "watchVisible", label: "Reloj", choices: ["OCULTAR RELOJ", "MOSTRAR RELOJ"] },
+      { key: "triadMode", label: "Tríada común", choices: ["OFF", "MUÑECA", "RELOJ"] }
     ]
   },
   {
@@ -81,9 +83,9 @@ const GROUPS = [
 const WRIST_CALIBRATION = [
   {
     id: "position", label: "POSICIÓN", fields: [
-      { key: "occluderXmm", label: "X", min: -100, max: 100, step: 1, unit: " mm" },
-      { key: "occluderYmm", label: "Y", min: -120, max: 120, step: 1, unit: " mm" },
-      { key: "occluderZmm", label: "Z", min: -100, max: 100, step: 1, unit: " mm" }
+      { key: "occluderXmm", label: "X · +→3", min: -200, max: 200, step: 1, unit: " mm" },
+      { key: "occluderYmm", label: "Y · +→12", min: -200, max: 200, step: 1, unit: " mm" },
+      { key: "occluderZmm", label: "Z · +→CRISTAL", min: -200, max: 200, step: 1, unit: " mm" }
     ]
   },
   {
@@ -110,18 +112,26 @@ let calibrationSection = "position";
 let calibrationFieldKey = "occluderXmm";
 let calibrationActive = false;
 let cleanView = false;
+let cameraPaused = false;
+let freezeCanvas = null;
 
 function load() {
   try {
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
-    Object.keys(tuning).forEach((k) => {
-      if (Number.isFinite(saved[k])) tuning[k] = saved[k];
+    Object.keys(tuning).forEach((key) => {
+      if (Number.isFinite(saved[key])) tuning[key] = saved[key];
     });
-  } catch (e) { /* primera vez */ }
+  } catch (error) {
+    /* primera vez / modo privado */
+  }
 }
 
 function save() {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(tuning)); } catch (e) { /* modo privado */ }
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(tuning));
+  } catch (error) {
+    /* modo privado */
+  }
 }
 
 function notify(key) {
@@ -146,11 +156,23 @@ function ensureRuntimeStyles() {
       opacity: 0 !important;
     }
     body.wrist-calibration-open #tunerRoot {
-      bottom: calc(env(safe-area-inset-bottom) + 16px) !important;
+      bottom: calc(env(safe-area-inset-bottom) + 12px) !important;
       gap: 0 !important;
     }
     body.wrist-clean-view #tunerRoot {
       display: none !important;
+    }
+    .wrist-freeze-canvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      pointer-events: none;
+      z-index: -2;
+    }
+    body[data-facing="user"] .wrist-freeze-canvas {
+      transform: scaleX(-1);
     }
     .tuner-choice-row {
       display: grid;
@@ -174,28 +196,46 @@ function ensureRuntimeStyles() {
       box-shadow: inset 0 -3px 0 #a992ff;
     }
     .wrist-calibration-panel {
-      width: min(94vw, 520px);
+      width: min(96vw, 560px);
       display: flex;
       flex-direction: column;
-      gap: 7px;
+      gap: 6px;
       padding: 8px;
       border: 1px solid rgba(106,85,176,.72);
       border-radius: 6px;
-      background: rgba(13,10,22,.76);
-      -webkit-backdrop-filter: blur(10px);
-      backdrop-filter: blur(10px);
+      background: rgba(13,10,22,.74);
+      -webkit-backdrop-filter: blur(8px);
+      backdrop-filter: blur(8px);
     }
     .wrist-calibration-title {
       display: flex;
       align-items: center;
       justify-content: space-between;
+      gap: 10px;
       color: #e3dcff;
       font: 700 11px/1 ui-monospace, Menlo, monospace;
-      letter-spacing: 1.1px;
+      letter-spacing: 1px;
     }
     .wrist-calibration-title b {
       color: #a992ff;
-      font-size: 12px;
+      font-size: 11px;
+      text-align: right;
+    }
+    .wrist-axis-rule {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 4px;
+      font: 800 10px/1.1 ui-monospace, Menlo, monospace;
+      text-align: center;
+      text-shadow: 0 1px 3px #000;
+    }
+    .wrist-axis-rule .x { color: #ff5c6c; }
+    .wrist-axis-rule .y { color: #6ad46a; }
+    .wrist-axis-rule .z { color: #5aa9ff; }
+    .wrist-calibration-tools {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 5px;
     }
     .wrist-calibration-tabs,
     .wrist-calibration-fields,
@@ -204,24 +244,31 @@ function ensureRuntimeStyles() {
       grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: 5px;
     }
+    .wrist-calibration-tools button,
     .wrist-calibration-tabs button,
     .wrist-calibration-fields button,
     .wrist-calibration-actions button,
     .wrist-advanced-button {
-      min-height: 36px;
-      padding: 7px 5px;
+      min-height: 37px;
+      padding: 7px 4px;
       border: 1px solid #3d3160;
       border-radius: 4px;
-      background: rgba(13,10,22,.9);
+      background: rgba(13,10,22,.92);
       color: #9b8bc4;
-      font: 700 10px/1 ui-monospace, Menlo, monospace;
-      letter-spacing: .8px;
+      font: 700 9px/1.05 ui-monospace, Menlo, monospace;
+      letter-spacing: .55px;
     }
+    .wrist-calibration-tools button.on,
     .wrist-calibration-tabs button.on,
     .wrist-calibration-fields button.on {
       border-color: #a992ff;
       background: #2a2145;
       color: #fff;
+    }
+    .wrist-calibration-tools .pause.on {
+      border-color: #d4b76a;
+      color: #fff4bf;
+      background: rgba(90,69,20,.9);
     }
     .wrist-calibration-actions .done {
       border-color: #a992ff;
@@ -235,6 +282,7 @@ function ensureRuntimeStyles() {
       display: flex;
       justify-content: space-between;
       align-items: baseline;
+      gap: 8px;
       color: #e3dcff;
       font: 700 12px/1 ui-monospace, Menlo, monospace;
       text-shadow: 0 1px 3px #000, 0 0 8px #000;
@@ -247,22 +295,22 @@ function ensureRuntimeStyles() {
       -webkit-appearance: none;
       appearance: none;
       width: 100%;
-      height: 38px;
+      height: 42px;
       margin: 0;
       background: transparent;
     }
     .wrist-calibration-slider input[type=range]::-webkit-slider-runnable-track {
       height: 6px;
       border-radius: 4px;
-      background: rgba(160,140,230,.68);
+      background: rgba(160,140,230,.72);
       box-shadow: 0 0 0 1px rgba(0,0,0,.7);
     }
     .wrist-calibration-slider input[type=range]::-webkit-slider-thumb {
       -webkit-appearance: none;
       appearance: none;
-      width: 34px;
-      height: 34px;
-      margin-top: -14px;
+      width: 36px;
+      height: 36px;
+      margin-top: -15px;
       border: 3px solid #0d0a16;
       border-radius: 50%;
       background: #a992ff;
@@ -284,10 +332,14 @@ function ensureRuntimeStyles() {
 
 function displayValue(field) {
   const value = tuning[field.key];
-  if (field.choices) return field.choices[Math.max(0, Math.min(field.choices.length - 1, Math.round(value)))] || "";
+  if (field.choices) {
+    return field.choices[
+      Math.max(0, Math.min(field.choices.length - 1, Math.round(value)))
+    ] || "";
+  }
   if (field.toggle) return field.toggle[value ? 1 : 0];
   const decimals = field.step < 1 ? 2 : 0;
-  return value.toFixed(decimals) + field.unit;
+  return Number(value).toFixed(decimals) + field.unit;
 }
 
 function renderGroup(group) {
@@ -314,12 +366,16 @@ function renderGroup(group) {
       field.choices.forEach((label, index) => {
         const button = document.createElement("button");
         button.type = "button";
-        button.className = "tuner-choice" + (Math.round(tuning[field.key]) === index ? " on" : "");
+        button.className =
+          "tuner-choice" +
+          (Math.round(tuning[field.key]) === index ? " on" : "");
         button.textContent = label;
         button.addEventListener("click", () => {
           tuning[field.key] = index;
           value.textContent = displayValue(field);
-          buttons.forEach((item, itemIndex) => item.classList.toggle("on", itemIndex === index));
+          buttons.forEach((item, itemIndex) => {
+            item.classList.toggle("on", itemIndex === index);
+          });
           notify(field.key);
         });
         buttons.push(button);
@@ -345,47 +401,92 @@ function renderGroup(group) {
     panel.appendChild(row);
   });
 
-  const reset = document.createElement("button");
-  reset.type = "button";
-  reset.className = "tuner-reset";
-  reset.textContent = "COPIAR VALORES";
-  reset.addEventListener("click", () => {
+  const copy = document.createElement("button");
+  copy.type = "button";
+  copy.className = "tuner-reset";
+  copy.textContent = "COPIAR VALORES";
+  copy.addEventListener("click", () => {
     const text = JSON.stringify(tuning, null, 1);
     if (navigator.clipboard) navigator.clipboard.writeText(text).catch(() => {});
-    reset.textContent = "COPIADO";
-    setTimeout(() => { reset.textContent = "COPIAR VALORES"; }, 1400);
+    copy.textContent = "COPIADO";
+    setTimeout(() => { copy.textContent = "COPIAR VALORES"; }, 1400);
   });
-  panel.appendChild(reset);
+  panel.appendChild(copy);
 
   return panel;
 }
 
 function currentCalibrationSection() {
-  return WRIST_CALIBRATION.find((section) => section.id === calibrationSection) || WRIST_CALIBRATION[0];
+  return WRIST_CALIBRATION.find(
+    (section) => section.id === calibrationSection
+  ) || WRIST_CALIBRATION[0];
 }
 
 function currentCalibrationField() {
   const section = currentCalibrationSection();
-  return section.fields.find((field) => field.key === calibrationFieldKey) || section.fields[0];
+  return section.fields.find(
+    (field) => field.key === calibrationFieldKey
+  ) || section.fields[0];
+}
+
+function removeFreezeCanvas() {
+  if (freezeCanvas && freezeCanvas.parentNode) {
+    freezeCanvas.parentNode.removeChild(freezeCanvas);
+  }
+  freezeCanvas = null;
+}
+
+function setCalibrationPaused(paused) {
+  const next = Boolean(paused);
+  if (next === cameraPaused) return;
+
+  if (next) {
+    const video = document.getElementById("cameraVideo");
+    const lab = document.querySelector(".camera-lab");
+    if (!video || !lab || video.readyState < 2 || !video.videoWidth || !video.videoHeight) {
+      return;
+    }
+
+    removeFreezeCanvas();
+    freezeCanvas = document.createElement("canvas");
+    freezeCanvas.className = "wrist-freeze-canvas";
+    freezeCanvas.width = video.videoWidth;
+    freezeCanvas.height = video.videoHeight;
+    const ctx = freezeCanvas.getContext("2d");
+    if (ctx) ctx.drawImage(video, 0, 0, freezeCanvas.width, freezeCanvas.height);
+    lab.appendChild(freezeCanvas);
+    cameraPaused = true;
+    window.AmuraWristCalibrationPaused = true;
+  } else {
+    cameraPaused = false;
+    window.AmuraWristCalibrationPaused = false;
+    removeFreezeCanvas();
+  }
 }
 
 function enterWristCalibration() {
   calibrationActive = true;
   cleanView = false;
   wristView = "calibration";
+  setCalibrationPaused(false);
   tuning.watchVisible = 0;
   tuning.occluderMode = 2;
+  tuning.triadMode = 1;
   notify("watchVisible");
   notify("occluderMode");
+  notify("triadMode");
 }
 
 function finishWristCalibration() {
   calibrationActive = false;
   cleanView = false;
+  setCalibrationPaused(false);
   tuning.watchVisible = 1;
   tuning.occluderMode = 3;
+  tuning.triadMode = 0;
   notify("watchVisible");
   notify("occluderMode");
+  notify("triadMode");
   document.body.classList.remove("wrist-clean-view");
 }
 
@@ -406,6 +507,13 @@ function showCleanView(event) {
   }, 80);
 }
 
+function triadButtonLabel() {
+  const mode = Math.max(0, Math.min(2, Math.round(Number(tuning.triadMode) || 0)));
+  if (mode === 1) return "TRÍADA · MUÑECA";
+  if (mode === 2) return "TRÍADA · RELOJ";
+  return "TRÍADA · OFF";
+}
+
 function renderWristCalibration() {
   const panel = document.createElement("div");
   panel.className = "wrist-calibration-panel";
@@ -415,9 +523,57 @@ function renderWristCalibration() {
   const left = document.createElement("span");
   left.textContent = "MUÑECA · AJUSTE";
   const state = document.createElement("b");
-  state.textContent = "RELOJ OCULTO · SÓLIDA";
+  state.textContent =
+    (cameraPaused ? "PAUSA" : "LIVE") +
+    " · " +
+    (Number(tuning.watchVisible) ? "RELOJ VISIBLE" : "RELOJ OCULTO");
   title.append(left, state);
   panel.appendChild(title);
+
+  const axisRule = document.createElement("div");
+  axisRule.className = "wrist-axis-rule";
+  axisRule.innerHTML =
+    '<span class="x">+X · 9→3</span>' +
+    '<span class="y">+Y · 6→12</span>' +
+    '<span class="z">+Z · ESFERA→CRISTAL</span>';
+  panel.appendChild(axisRule);
+
+  const tools = document.createElement("div");
+  tools.className = "wrist-calibration-tools";
+
+  const pause = document.createElement("button");
+  pause.type = "button";
+  pause.className = "pause" + (cameraPaused ? " on" : "");
+  pause.textContent = cameraPaused ? "▶ REANUDAR" : "⏸ PAUSAR";
+  pause.addEventListener("click", () => {
+    setCalibrationPaused(!cameraPaused);
+    render();
+  });
+
+  const watch = document.createElement("button");
+  watch.type = "button";
+  watch.className = Number(tuning.watchVisible) ? "on" : "";
+  watch.textContent = Number(tuning.watchVisible)
+    ? "RELOJ · VISIBLE"
+    : "RELOJ · OCULTO";
+  watch.addEventListener("click", () => {
+    tuning.watchVisible = Number(tuning.watchVisible) ? 0 : 1;
+    notify("watchVisible");
+    render();
+  });
+
+  const triad = document.createElement("button");
+  triad.type = "button";
+  triad.className = Number(tuning.triadMode) ? "on" : "";
+  triad.textContent = triadButtonLabel();
+  triad.addEventListener("click", () => {
+    tuning.triadMode = (Math.round(Number(tuning.triadMode) || 0) + 1) % 3;
+    notify("triadMode");
+    render();
+  });
+
+  tools.append(pause, watch, triad);
+  panel.appendChild(tools);
 
   const sectionTabs = document.createElement("div");
   sectionTabs.className = "wrist-calibration-tabs";
@@ -454,6 +610,7 @@ function renderWristCalibration() {
   const field = currentCalibrationField();
   const sliderWrap = document.createElement("div");
   sliderWrap.className = "wrist-calibration-slider";
+
   const head = document.createElement("div");
   head.className = "wrist-calibration-head";
   const name = document.createElement("span");
@@ -473,6 +630,7 @@ function renderWristCalibration() {
     value.textContent = displayValue(field);
     notify(field.key);
   });
+
   sliderWrap.append(head, input);
   panel.appendChild(sliderWrap);
 
@@ -506,6 +664,7 @@ function renderWristCalibration() {
 
   actions.append(clean, advanced, done);
   panel.appendChild(actions);
+
   return panel;
 }
 
@@ -519,9 +678,7 @@ function renderAdvancedWrist(group) {
   back.textContent = "VOLVER A MODO AJUSTE";
   back.addEventListener("click", () => {
     wristView = "calibration";
-    tuning.watchVisible = 0;
     tuning.occluderMode = 2;
-    notify("watchVisible");
     notify("occluderMode");
     render();
   });
@@ -534,9 +691,13 @@ function render() {
   root.innerHTML = "";
   const wristOpen = openGroup === "wrist";
   const calibrationOpen = wristOpen && wristView === "calibration";
+
   document.body.classList.toggle("wrist-tuning-open", wristOpen);
   document.body.classList.toggle("wrist-calibration-open", calibrationOpen);
-  document.body.classList.toggle("wrist-clean-view", calibrationOpen && cleanView);
+  document.body.classList.toggle(
+    "wrist-clean-view",
+    calibrationOpen && cleanView
+  );
 
   if (calibrationOpen) {
     root.appendChild(renderWristCalibration());
@@ -548,7 +709,10 @@ function render() {
     open.type = "button";
     open.className = "tuner-toggle";
     open.textContent = "AJUSTES";
-    open.addEventListener("click", () => { openGroup = "menu"; render(); });
+    open.addEventListener("click", () => {
+      openGroup = "menu";
+      render();
+    });
     root.appendChild(open);
     return;
   }
@@ -559,7 +723,8 @@ function render() {
   GROUPS.forEach((group) => {
     const button = document.createElement("button");
     button.type = "button";
-    button.className = "tuner-tab" + (openGroup === group.id ? " on" : "");
+    button.className =
+      "tuner-tab" + (openGroup === group.id ? " on" : "");
     button.textContent = group.label;
     button.addEventListener("click", () => {
       if (group.id === "wrist" && openGroup !== "wrist") {
@@ -581,7 +746,9 @@ function render() {
   close.className = "tuner-tab close";
   close.textContent = "×";
   close.addEventListener("click", () => {
-    if (openGroup === "wrist" && calibrationActive) finishWristCalibration();
+    if (openGroup === "wrist" && calibrationActive) {
+      finishWristCalibration();
+    }
     openGroup = "";
     render();
   });
@@ -601,6 +768,7 @@ function render() {
 export function initTuner(changeHandler) {
   onChange = changeHandler;
   load();
+  window.AmuraWristCalibrationPaused = false;
   ensureRuntimeStyles();
   root = document.createElement("div");
   root.id = "tunerRoot";
