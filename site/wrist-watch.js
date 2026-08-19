@@ -1,6 +1,7 @@
 import {
   ACESFilmicToneMapping,
   AmbientLight,
+  AxesHelper,
   CapsuleGeometry,
   DirectionalLight,
   Group,
@@ -24,6 +25,7 @@ const MODEL_URL = "./models/A1-Irontide-AR-pretty-mobile.glb";
 const MODEL_CONFIG_URL = "./models/A1-Irontide-AR-pretty-mobile.json";
 const MODEL_Z_OFFSET_RADIANS = Math.PI / 2;
 const DEG_TO_RAD = Math.PI / 180;
+
 const DEFAULT_MODEL_CONFIG = {
   asset: "A1-Irontide-AR-pretty-mobile.glb",
   scaleToMillimeters: 1000,
@@ -44,6 +46,7 @@ const wristSurfaceOffset = new Vector3();
 const rotatedContactOffset = new Vector3();
 const contactWorldPosition = new Vector3();
 const wristLocalQuaternion = new Quaternion();
+const wristSurfacePoint = new Vector3();
 
 let renderer = null;
 let wristRig = null;
@@ -51,6 +54,7 @@ let watchAnchor = null;
 let watchModel = null;
 let wristOccluder = null;
 let wristOccluderMaterial = null;
+let calibrationAxes = null;
 let contactOffsetInAnchor = new Vector3();
 let occluderModeApplied = -1;
 let modelStatus = "en espera";
@@ -96,8 +100,6 @@ async function loadModelConfig() {
 function createWristOccluder() {
   if (!wristRig || wristOccluder) return wristOccluder;
 
-  // Cápsula base: radio 1 y tramo recto 2. Su tamaño total base es 2 × 4 × 2.
-  // La deformamos por escala para convertirla en una muñeca elíptica ajustable.
   const geometry = new CapsuleGeometry(1, 2, 8, 20);
   wristOccluderMaterial = new MeshBasicMaterial({
     color: 0x8d6cff,
@@ -112,6 +114,20 @@ function createWristOccluder() {
   wristOccluder.renderOrder = -1000;
   wristOccluder.visible = false;
   wristRig.add(wristOccluder);
+
+  // Tríada única del sistema:
+  // +X = 9→3 · +Y = 6→12 · +Z = esfera→cristal.
+  calibrationAxes = new AxesHelper(38);
+  calibrationAxes.name = "AMURA_COMMON_XYZ_TRIAD";
+  calibrationAxes.visible = false;
+  calibrationAxes.renderOrder = 5000;
+  if (calibrationAxes.material) {
+    calibrationAxes.material.depthTest = false;
+    calibrationAxes.material.transparent = true;
+    calibrationAxes.material.opacity = 0.98;
+  }
+  wristRig.add(calibrationAxes);
+
   return wristOccluder;
 }
 
@@ -121,10 +137,11 @@ function updateVirtualWristAndWatch() {
   const width = Math.max(1, Number(tuning.occluderWidthMm) || 62);
   const thickness = Math.max(1, Number(tuning.occluderThicknessMm) || 44);
   const length = Math.max(1, Number(tuning.occluderLengthMm) || 150);
-  const mode = Math.max(0, Math.min(3, Math.round(Number(tuning.occluderMode) || 0)));
+  const mode = Math.max(
+    0,
+    Math.min(3, Math.round(Number(tuning.occluderMode) || 0))
+  );
 
-  // La muñeca virtual siempre existe geométricamente aunque esté en OFF.
-  // Esto permite que el reloj siga apoyado correctamente aunque no la dibujemos.
   wristOccluder.scale.set(width / 2, length / 4, thickness / 2);
   wristOccluder.position.set(
     Number(tuning.occluderXmm) || 0,
@@ -140,51 +157,68 @@ function updateVirtualWristAndWatch() {
   wristOccluder.visible = mode !== 0;
   if (mode !== occluderModeApplied) {
     if (mode === 1) {
-      // TRANSPARENTE: sirve para colocar la cápsula sin tapar el reloj.
       wristOccluderMaterial.colorWrite = true;
       wristOccluderMaterial.transparent = true;
       wristOccluderMaterial.opacity = 0.30;
       wristOccluderMaterial.depthWrite = false;
     } else if (mode === 2) {
-      // SÓLIDA: muestra la geometría completa para comprobar su volumen real.
       wristOccluderMaterial.colorWrite = true;
       wristOccluderMaterial.transparent = false;
       wristOccluderMaterial.opacity = 1;
       wristOccluderMaterial.depthWrite = true;
     } else if (mode === 3) {
-      // OCLUSIÓN: no dibuja color, pero sí profundidad.
       wristOccluderMaterial.colorWrite = false;
       wristOccluderMaterial.transparent = false;
       wristOccluderMaterial.opacity = 1;
       wristOccluderMaterial.depthWrite = true;
     }
+
     wristOccluderMaterial.depthTest = true;
     wristOccluderMaterial.needsUpdate = true;
     occluderModeApplied = mode;
   }
 
-  if (!watchAnchor || !watchModel) return;
-
-  // El reloj hereda exactamente la orientación local de la muñeca virtual.
   wristLocalQuaternion.copy(wristOccluder.quaternion);
-  watchAnchor.quaternion.copy(wristLocalQuaternion);
 
-  // Punto de apoyo de la cápsula: centro + semigrosor en su Z local.
   wristSurfaceOffset
     .set(0, 0, thickness / 2)
     .applyQuaternion(wristLocalQuaternion);
 
-  // AMURA_CASEBACK_CONTACT debe coincidir con ese punto de apoyo.
-  rotatedContactOffset
-    .copy(contactOffsetInAnchor)
-    .applyQuaternion(wristLocalQuaternion);
-
-  watchAnchor.position
+  wristSurfacePoint
     .copy(wristOccluder.position)
-    .add(wristSurfaceOffset)
-    .sub(rotatedContactOffset);
+    .add(wristSurfaceOffset);
 
-  watchModel.visible = Boolean(Number(tuning.watchVisible));
+  if (watchAnchor && watchModel) {
+    watchAnchor.quaternion.copy(wristLocalQuaternion);
+
+    rotatedContactOffset
+      .copy(contactOffsetInAnchor)
+      .applyQuaternion(wristLocalQuaternion);
+
+    watchAnchor.position
+      .copy(wristSurfacePoint)
+      .sub(rotatedContactOffset);
+
+    watchModel.visible = Boolean(Number(tuning.watchVisible));
+  }
+
+  if (calibrationAxes) {
+    const triadMode = Math.max(
+      0,
+      Math.min(2, Math.round(Number(tuning.triadMode) || 0))
+    );
+
+    calibrationAxes.visible = triadMode !== 0;
+    calibrationAxes.quaternion.copy(wristLocalQuaternion);
+
+    if (triadMode === 1) {
+      // Misma tríada, dibujada en el centro de la muñeca digital.
+      calibrationAxes.position.copy(wristOccluder.position);
+    } else if (triadMode === 2) {
+      // Misma tríada, movida al punto de apoyo del reloj.
+      calibrationAxes.position.copy(wristSurfacePoint);
+    }
+  }
 }
 
 function loadWatch() {
@@ -192,6 +226,7 @@ function loadWatch() {
   if (modelPromise) return modelPromise;
 
   modelStatus = "cargando";
+
   const loader = new GLTFLoader();
   const dracoLoader = new DRACOLoader();
   dracoLoader.setDecoderPath("./vendor/three/draco/");
@@ -205,10 +240,9 @@ function loadWatch() {
     watchModel = gltf.scene;
     watchModel.name = "A1_IRONTIDE_AR_PRETTY_METERS";
 
-    // El GLB conserva metros estándar; este nodo lo convierte una sola vez a mm.
     watchModel.scale.setScalar(Number(config.scaleToMillimeters) || 1000);
 
-    // Corrección fija del asset respecto a la tríada de seguimiento.
+    // Corrección fija del asset. No altera la convención XYZ del rig.
     watchModel.rotateZ(MODEL_Z_OFFSET_RADIANS);
 
     const rootNode = watchModel.getObjectByName(config.rootNode);
@@ -223,14 +257,15 @@ function loadWatch() {
     watchAnchor.add(watchModel);
     wristRig.add(watchAnchor);
     scene.add(wristRig);
+
     createWristOccluder();
 
-    // Medimos una sola vez dónde queda el punto real del fondo respecto al anclaje.
-    // Después lo hacemos coincidir con la superficie de la cápsula en cada frame.
     wristRig.updateMatrixWorld(true);
     if (contactNode) {
       contactNode.getWorldPosition(contactWorldPosition);
-      contactOffsetInAnchor = watchAnchor.worldToLocal(contactWorldPosition.clone());
+      contactOffsetInAnchor = watchAnchor.worldToLocal(
+        contactWorldPosition.clone()
+      );
     } else {
       contactOffsetInAnchor.set(0, 0, 0);
     }
@@ -290,7 +325,11 @@ function ensureRenderer(width, height) {
 function resizeRenderer(width, height) {
   const nextWidth = Math.max(1, Math.round(width));
   const nextHeight = Math.max(1, Math.round(height));
-  if (!renderer || (nextWidth === viewportWidth && nextHeight === viewportHeight)) {
+
+  if (
+    !renderer ||
+    (nextWidth === viewportWidth && nextHeight === viewportHeight)
+  ) {
     return;
   }
 
@@ -323,49 +362,54 @@ export function updateWristWatch(options) {
 
   if (!width || !height || !pose) return holdWristWatch();
   if (!ensureRenderer(width, height)) return state(false);
+
   if (!wristRig) {
     renderer.render(scene, camera);
     return state(false);
   }
 
-  // La perspectiva usa la focal estimada del vídeo. El navegador no expone
-  // intrínsecos completos, por eso el FOV diagonal sigue siendo ajustable.
   const fovYDegrees = Number(options.fovYDegrees) || 50;
   if (Math.abs(camera.fov - fovYDegrees) > 0.01) {
     camera.fov = fovYDegrees;
     camera.updateProjectionMatrix();
   }
 
-  axisX.set(pose.xAxis.x, pose.xAxis.y, pose.xAxis.z).normalize();
-  axisY.set(pose.yAxis.x, pose.yAxis.y, pose.yAxis.z).normalize();
-  axisZ.set(pose.zAxis.x, pose.zAxis.y, pose.zAxis.z).normalize();
-  orientationMatrix.makeBasis(axisX, axisY, axisZ);
-  orientationQuaternion.setFromRotationMatrix(orientationMatrix);
+  const calibrationPaused = Boolean(window.AmuraWristCalibrationPaused);
 
-  const dialRadians = (Number(tuning.dialDegrees) || 0) * Math.PI / 180;
-  dialQuaternion.setFromAxisAngle(axisZ, dialRadians);
-  orientationQuaternion.premultiply(dialQuaternion);
-  wristRig.quaternion.copy(orientationQuaternion);
+  // En pausa se congela la pose completa del rig. El loop continúa y solo
+  // re-renderiza los cambios manuales de la muñeca virtual sobre la foto fija.
+  if (!calibrationPaused) {
+    axisX.set(pose.xAxis.x, pose.xAxis.y, pose.xAxis.z).normalize();
+    axisY.set(pose.yAxis.x, pose.yAxis.y, pose.yAxis.z).normalize();
+    axisZ.set(pose.zAxis.x, pose.zAxis.y, pose.zAxis.z).normalize();
 
-  // Todo en milímetros. Estos offsets desplazan la muñeca virtual completa;
-  // el reloj ya no tiene un offset independiente: queda apoyado sobre ella.
-  const backMm = Number(tuning.offsetMm) || 0;
-  const sideMm = Number(tuning.lateralMm) || 0;
-  const upMm = Number(tuning.liftMm) || 0;
-  const arm = pose.armAxis || pose.yAxis;
+    orientationMatrix.makeBasis(axisX, axisY, axisZ);
+    orientationQuaternion.setFromRotationMatrix(orientationMatrix);
 
-  wristRig.position.set(
-    pose.positionMm.x - arm.x * backMm + axisX.x * sideMm + axisZ.x * upMm,
-    pose.positionMm.y - arm.y * backMm + axisX.y * sideMm + axisZ.y * upMm,
-    pose.positionMm.z - arm.z * backMm + axisX.z * sideMm + axisZ.z * upMm
-  );
+    const dialRadians = (Number(tuning.dialDegrees) || 0) * DEG_TO_RAD;
+    dialQuaternion.setFromAxisAngle(axisZ, dialRadians);
+    orientationQuaternion.premultiply(dialQuaternion);
+    wristRig.quaternion.copy(orientationQuaternion);
+
+    const backMm = Number(tuning.offsetMm) || 0;
+    const sideMm = Number(tuning.lateralMm) || 0;
+    const upMm = Number(tuning.liftMm) || 0;
+    const arm = pose.armAxis || pose.yAxis;
+
+    wristRig.position.set(
+      pose.positionMm.x - arm.x * backMm + axisX.x * sideMm + axisZ.x * upMm,
+      pose.positionMm.y - arm.y * backMm + axisX.y * sideMm + axisZ.y * upMm,
+      pose.positionMm.z - arm.z * backMm + axisX.z * sideMm + axisZ.z * upMm
+    );
+
+    lastDepthMm = pose.depthMm;
+    lastPalmWidthMm = pose.palmWidthMm;
+    lastReprojectionErrorPx = pose.reprojectionErrorPx;
+  }
 
   wristRig.scale.setScalar(1);
   wristRig.visible = true;
   updateVirtualWristAndWatch();
-  lastDepthMm = pose.depthMm;
-  lastPalmWidthMm = pose.palmWidthMm;
-  lastReprojectionErrorPx = pose.reprojectionErrorPx;
   renderer.render(scene, camera);
 
   return state(true);
@@ -384,5 +428,4 @@ export function hideWristWatch() {
   renderer.render(scene, camera);
 }
 
-// Carga el A1 mientras el usuario concede el permiso de cámara.
 loadWatch().catch(() => {});
