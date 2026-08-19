@@ -21,7 +21,7 @@
     <script type="importmap">
       {
         "imports": {
-          "./wrist-watch.js?v=11.2": "./wrist-watch-ar03-calibrated.js?v=ar03.5",
+          "./wrist-watch.js?v=11.2": "./wrist-watch-ar03-localz.js?v=ar03.6",
           "./wrist-watch.js?v=ar02.2": "./wrist-watch.js?v=ar03.1-base",
           "./wrist-stabilizer.js?v=11.2": "./wrist-stabilizer.js?v=11.3.0",
           "./tuner.js?v=11.2": "./tuner.js?v=11.3.0",
@@ -32,7 +32,7 @@
     </script>
     <script src="watch-x-control.js?v=ar03.4" type="module"></script>
     <script src="wrist-mode-control.js?v=ar03.4" type="module"></script>
-    <script src="hand-tracking.js?v=ar03.5" type="module"></script>
+    <script src="hand-tracking.js?v=ar03.6" type="module"></script>
   </head>
   <body data-status="idle" data-facing="environment" data-tracking="idle">
     <main class="camera-lab">
@@ -85,7 +85,7 @@
         <p class="eyebrow">PRIMER OBJETO 3D</p>
         <h1 id="cameraTitle">A1 · AR-03 · EJE ANTEBRAZO</h1>
         <p id="statusMessage" class="lead">
-          MediaPipe continuo · el borde del antebrazo calibra X sin gobernarlo fotograma a fotograma.
+          MediaPipe continuo · borde calibrador · corrección retenida sobre Z vivo.
         </p>
         <p class="privacy">
           El análisis ocurre en este dispositivo. Este laboratorio no almacena imágenes.
