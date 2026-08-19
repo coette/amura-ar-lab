@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#000000">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="AMURA AR">
+    <meta name="mobile-web-app-capable" content="yes">
+    <title>Amura AR · Punto 5 Pose métrica V11.2</title>
+    <link rel="manifest" href="manifest.webmanifest?v=11.2">
+    <link rel="icon" href="icon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+    <link rel="stylesheet" href="styles.css?v=11.2">
+    <script src="camera.js?v=11.2" defer></script>
+    <script src="hand-tracking.js?v=11.2" type="module"></script>
+  </head>
+  <body data-status="idle" data-facing="environment" data-tracking="idle">
+    <main class="camera-lab">
+      <video
+        id="cameraVideo"
+        class="camera-video"
+        autoplay
+        muted
+        playsinline
+        aria-label="Vista en directo de la cámara"
+      ></video>
+      <div class="camera-shade" aria-hidden="true"></div>
+      <canvas
+        id="threeCanvas"
+        class="three-canvas"
+        aria-hidden="true"
+      ></canvas>
+      <canvas
+        id="trackingCanvas"
+        class="tracking-canvas"
+        aria-hidden="true"
+      ></canvas>
+
+      <header class="topbar">
+        <div>
+          <p class="brand">AMURA</p>
+          <p class="phase">FASE 2 · PUNTO 5 · V11.2</p>
+        </div>
+        <div class="status-pill" role="status" aria-live="polite">
+          <span class="status-dot" aria-hidden="true"></span>
+          <span id="statusLabel">EN ESPERA</span>
+        </div>
+      </header>
+
+      <div id="trackingHud" class="tracking-hud" role="status" aria-live="polite" hidden>
+        <span class="tracking-dot" aria-hidden="true"></span>
+        <span id="trackingLabel">MEDIAPIPE EN ESPERA</span>
+      </div>
+
+      <div class="axis-legend" aria-label="Convención de ejes del reloj">
+        <span class="axis-chip axis-x">X <small>9→3</small></span>
+        <span class="axis-chip axis-y">Y <small>12→6</small></span>
+        <span class="axis-chip axis-z">Z <small>NORMAL</small></span>
+      </div>
+
+      <section id="startPanel" class="start-card" aria-labelledby="cameraTitle">
+        <p class="eyebrow">PRIMER OBJETO 3D</p>
+        <h1 id="cameraTitle">A1 · Pose métrica V11.2</h1>
+        <p id="statusMessage" class="lead">
+          Prueba el A1 optimizado con XYZ corregido, perspectiva y escala por distancia.
+        </p>
+        <p class="privacy">
+          El análisis ocurre en este dispositivo. Este laboratorio no almacena imágenes.
+        </p>
+        <p id="installHint" class="install-hint">
+          SIN BARRAS EN IPHONE/IPAD: COMPARTIR → AÑADIR A PANTALLA DE INICIO
+        </p>
+        <button id="startButton" class="primary-button" type="button">
+          Abrir cámara trasera
+        </button>
+      </section>
+
+      <section id="requestPanel" class="requesting" role="status" aria-live="polite" hidden>
+        <span class="spinner" aria-hidden="true"></span>
+        <p>Esperando permiso de cámara…</p>
+      </section>
+
+      <aside id="diagnosticsPanel" class="diagnostics" aria-label="Diagnóstico de cámara" hidden>
+        <div class="diagnostics-heading">
+          <div>
+            <p class="eyebrow">DIAGNÓSTICO</p>
+            <h2>Comparador de giro</h2>
+          </div>
+          <button id="closeDiagnosticsButton" class="icon-button" type="button" aria-label="Cerrar diagnóstico">×</button>
+        </div>
+        <dl id="diagnosticsList"></dl>
+      </aside>
+
+      <div class="rotation-modes" role="group" aria-label="Método de giro de muñeca">
+        <button class="rotation-mode" type="button" data-rotation-mode="world" aria-pressed="false">
+          WORLD
+        </button>
+        <button class="rotation-mode active" type="button" data-rotation-mode="image" aria-pressed="true">
+          IMAGE 3D
+        </button>
+        <button class="rotation-mode" type="button" data-rotation-mode="hybrid" aria-pressed="false">
+          HÍBRIDO
+        </button>
+      </div>
+
+      <nav class="controls" aria-label="Controles de cámara">
+        <button id="diagnosticsButton" class="control-button" type="button" aria-pressed="false">
+          <span class="control-label">DIAG</span>
+          <span id="fpsValue" class="control-value">DATOS</span>
+        </button>
+
+        <button id="guidesButton" class="control-button primary-control" type="button" aria-pressed="true">
+          <span class="control-label">GUÍAS</span>
+          <span id="guidesValue" class="control-value">OCULTAR</span>
+        </button>
+
+        <button id="switchCameraButton" class="control-button primary-control" type="button" hidden>
+          <span class="control-label">CÁMARA</span>
+          <span id="switchCameraValue" class="control-value">FRONTAL</span>
+        </button>
+
+        <button id="stopButton" class="control-button" type="button" hidden>
+          <span class="control-label">SESIÓN</span>
+          <span class="control-value">DETENER</span>
+        </button>
+      </nav>
+    </main>
+  </body>
+</html>
