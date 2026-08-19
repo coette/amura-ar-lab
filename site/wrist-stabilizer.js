@@ -13,6 +13,14 @@ function copyVector(vector) {
   };
 }
 
+function negateVector(vector) {
+  return {
+    x: -vector.x,
+    y: -vector.y,
+    z: -vector.z
+  };
+}
+
 function lerpVector(from, to, alpha) {
   return {
     x: from.x + (to.x - from.x) * alpha,
@@ -50,21 +58,31 @@ function quaternionDot(a, b) {
   return a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w;
 }
 
-function flipFrameAroundY(frame) {
-  return {
+function quaternionAngleDegrees(a, b) {
+  const cosine = clamp(Math.abs(quaternionDot(a, b)), -1, 1);
+  return 2 * Math.acos(cosine) * 180 / Math.PI;
+}
+
+function flipFrameAroundAxis(frame, axis) {
+  const result = {
     origin: copyVector(frame.origin),
-    xAxis: {
-      x: -frame.xAxis.x,
-      y: -frame.xAxis.y,
-      z: -frame.xAxis.z
-    },
+    xAxis: copyVector(frame.xAxis),
     yAxis: copyVector(frame.yAxis),
-    zAxis: {
-      x: -frame.zAxis.x,
-      y: -frame.zAxis.y,
-      z: -frame.zAxis.z
-    }
+    zAxis: copyVector(frame.zAxis)
   };
+
+  if (axis === "X") {
+    result.yAxis = negateVector(result.yAxis);
+    result.zAxis = negateVector(result.zAxis);
+  } else if (axis === "Y") {
+    result.xAxis = negateVector(result.xAxis);
+    result.zAxis = negateVector(result.zAxis);
+  } else if (axis === "Z") {
+    result.xAxis = negateVector(result.xAxis);
+    result.yAxis = negateVector(result.yAxis);
+  }
+
+  return result;
 }
 
 function multiplyQuaternions(a, b) {
@@ -235,7 +253,11 @@ export class WristFrameStabilizer {
       scaleMinCutoff: options.scaleMinCutoff || 0.8,
       scaleBeta: options.scaleBeta || 2,
       scaleDeadband: options.scaleDeadband || 0.02,
-      motionCutoff: options.motionCutoff || 1.5
+      motionCutoff: options.motionCutoff || 1.5,
+      gapResetMs: options.gapResetMs || 500,
+      jumpRejectDegrees: options.jumpRejectDegrees || 100,
+      jumpConfirmFrames: options.jumpConfirmFrames || 3,
+      jumpConfirmToleranceDegrees: options.jumpConfirmToleranceDegrees || 30
     };
     this.reset();
   }
@@ -254,6 +276,10 @@ export class WristFrameStabilizer {
     this.scaleVelocity = 0;
     this.angularSpeed = 0;
     this.axisFlipCorrected = false;
+    this.axisFlipAxis = "";
+    this.jumpRejected = false;
+    this.pendingJumpQuaternion = null;
+    this.pendingJumpFrames = 0;
   }
 
   update(frame, screenOrigin, overlayScale, timestampMilliseconds) {
@@ -262,25 +288,75 @@ export class WristFrameStabilizer {
     const timestamp = Number.isFinite(timestampMilliseconds)
       ? timestampMilliseconds
       : performance.now();
+
+    // Si la mano ha estado fuera medio segundo, la siguiente detección arranca limpia.
+    // Así un estado erróneo no puede quedarse enganchado al volver a entrar en cámara.
+    if (this.lastTimestamp !== null && timestamp - this.lastTimestamp > this.options.gapResetMs) {
+      this.reset();
+    }
+
     let currentQuaternion = quaternionFromFrame(frame);
     const currentScreenOrigin = copyVector(screenOrigin);
     const currentFrameOrigin = copyVector(frame.origin);
     this.axisFlipCorrected = false;
+    this.axisFlipAxis = "";
+    this.jumpRejected = false;
 
     if (this.filteredQuaternion) {
-      const alternateQuaternion = quaternionFromFrame(flipFrameAroundY(frame));
-      const directContinuity = Math.abs(quaternionDot(
-        this.filteredQuaternion,
-        currentQuaternion
-      ));
-      const alternateContinuity = Math.abs(quaternionDot(
-        this.filteredQuaternion,
-        alternateQuaternion
-      ));
+      // MediaPipe puede devolver de golpe la misma tríada con dos ejes invertidos,
+      // que visualmente equivale a un giro exacto de 180°. Probamos las tres
+      // ambigüedades posibles y elegimos siempre la que mantiene continuidad.
+      const candidates = [
+        { axis: "", quaternion: currentQuaternion },
+        { axis: "X", quaternion: quaternionFromFrame(flipFrameAroundAxis(frame, "X")) },
+        { axis: "Y", quaternion: quaternionFromFrame(flipFrameAroundAxis(frame, "Y")) },
+        { axis: "Z", quaternion: quaternionFromFrame(flipFrameAroundAxis(frame, "Z")) }
+      ];
 
-      if (alternateContinuity > directContinuity) {
-        currentQuaternion = alternateQuaternion;
+      let best = candidates[0];
+      let bestContinuity = Math.abs(quaternionDot(this.filteredQuaternion, best.quaternion));
+      for (let index = 1; index < candidates.length; index += 1) {
+        const continuity = Math.abs(quaternionDot(
+          this.filteredQuaternion,
+          candidates[index].quaternion
+        ));
+        if (continuity > bestContinuity) {
+          best = candidates[index];
+          bestContinuity = continuity;
+        }
+      }
+
+      currentQuaternion = best.quaternion;
+      if (best.axis) {
         this.axisFlipCorrected = true;
+        this.axisFlipAxis = best.axis;
+      }
+
+      // Un salto enorme que no sea una simple inversión de ejes no se acepta por
+      // un solo frame. Debe repetirse tres frames seguidos antes de considerarlo real.
+      const jumpDegrees = quaternionAngleDegrees(this.filteredQuaternion, currentQuaternion);
+      if (jumpDegrees > this.options.jumpRejectDegrees) {
+        const samePendingJump = this.pendingJumpQuaternion &&
+          quaternionAngleDegrees(this.pendingJumpQuaternion, currentQuaternion) <=
+            this.options.jumpConfirmToleranceDegrees;
+
+        if (samePendingJump) {
+          this.pendingJumpFrames += 1;
+        } else {
+          this.pendingJumpQuaternion = currentQuaternion;
+          this.pendingJumpFrames = 1;
+        }
+
+        if (this.pendingJumpFrames < this.options.jumpConfirmFrames) {
+          currentQuaternion = this.filteredQuaternion;
+          this.jumpRejected = true;
+        } else {
+          this.pendingJumpQuaternion = null;
+          this.pendingJumpFrames = 0;
+        }
+      } else {
+        this.pendingJumpQuaternion = null;
+        this.pendingJumpFrames = 0;
       }
     }
 
@@ -398,7 +474,10 @@ export class WristFrameStabilizer {
         positionAlpha,
         scaleAlpha,
         angularSpeedDegrees: this.angularSpeed * 180 / Math.PI,
-        axisFlipCorrected: this.axisFlipCorrected
+        axisFlipCorrected: this.axisFlipCorrected,
+        axisFlipAxis: this.axisFlipAxis,
+        jumpRejected: this.jumpRejected,
+        jumpPendingFrames: this.pendingJumpFrames
       }
     };
   }
