@@ -180,10 +180,13 @@ function updateVirtualWristAndWatch() {
     wristOccluder.position.set(0, 0, thickness / 2);
     wristOccluder.rotation.set(0, 0, Math.PI / 2);
 
-    // El reloj conserva íntegra la referencia estable AR-01.
+    // AR-03 puede desplazar SOLO el reloj sobre el X local del rig.
+    // P0, la tríada y la muñeca virtual permanecen exactamente en su sitio.
     if (watchAnchor && watchModel) {
+      const watchPlacementXmm = Number(window.AmuraWatchPlacementXmm) || 0;
       watchAnchor.quaternion.identity();
       watchAnchor.position.copy(contactOffsetInAnchor).multiplyScalar(-1);
+      watchAnchor.position.x += watchPlacementXmm;
       watchModel.visible = Boolean(Number(tuning.watchVisible));
     }
 
@@ -306,7 +309,7 @@ function loadWatch() {
     }
 
     contactStatus = rootNode && contactNode
-      ? (DIRECT_P0_TEST_MODE ? "AMURA_CASEBACK_CONTACT = P0" : "fondo → superficie muñeca · automático")
+      ? (DIRECT_P0_TEST_MODE ? "AMURA_CASEBACK_CONTACT referenciado a P0" : "fondo → superficie muñeca · automático")
       : "fallback al origen del GLB · automático";
 
     updateVirtualWristAndWatch();
@@ -385,6 +388,7 @@ function state(visible) {
     revision: REVISION,
     asset: modelConfig.asset || DEFAULT_MODEL_CONFIG.asset,
     contact: contactStatus,
+    placementXmm: Number(window.AmuraWatchPlacementXmm) || 0,
     units: DIRECT_P0_TEST_MODE ? "AR-02 · P0 + muñeca virtual" : "GLB m → escena mm → muñeca virtual",
     error: initializationError || modelError
   };
@@ -427,8 +431,8 @@ export function updateWristWatch(options) {
     wristRig.quaternion.copy(orientationQuaternion);
 
     if (DIRECT_P0_TEST_MODE) {
-      // P0 manda la posición completa del origen. Ningún offset de muñeca,
-      // fondo o calibración puede separarlo del landmark dorado.
+      // P0 manda la posición completa del origen. El desplazamiento de prueba
+      // pertenece solo a watchAnchor y nunca modifica este origen del rig.
       wristRig.position.set(
         pose.positionMm.x,
         pose.positionMm.y,
