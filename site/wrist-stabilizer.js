@@ -14,11 +14,7 @@ function copyVector(vector) {
 }
 
 function negateVector(vector) {
-  return {
-    x: -vector.x,
-    y: -vector.y,
-    z: -vector.z
-  };
+  return { x: -vector.x, y: -vector.y, z: -vector.z };
 }
 
 function lerpVector(from, to, alpha) {
@@ -44,7 +40,6 @@ function normalizeQuaternion(quaternion) {
     quaternion.z,
     quaternion.w
   );
-
   if (length < EPSILON) return { x: 0, y: 0, z: 0, w: 1 };
   return {
     x: quaternion.x / length,
@@ -81,7 +76,6 @@ function flipFrameAroundAxis(frame, axis) {
     result.xAxis = negateVector(result.xAxis);
     result.yAxis = negateVector(result.yAxis);
   }
-
   return result;
 }
 
@@ -102,21 +96,14 @@ function angularVelocity(previous, current, deltaSeconds) {
     w: previous.w
   };
   let delta = normalizeQuaternion(multiplyQuaternions(current, inversePrevious));
-
   if (delta.w < 0) {
-    delta = {
-      x: -delta.x,
-      y: -delta.y,
-      z: -delta.z,
-      w: -delta.w
-    };
+    delta = { x: -delta.x, y: -delta.y, z: -delta.z, w: -delta.w };
   }
 
   const sineHalfAngle = Math.hypot(delta.x, delta.y, delta.z);
   if (sineHalfAngle < EPSILON) return { x: 0, y: 0, z: 0 };
   const angle = 2 * Math.atan2(sineHalfAngle, clamp(delta.w, -1, 1));
   const factor = angle / sineHalfAngle / deltaSeconds;
-
   return {
     x: delta.x * factor,
     y: delta.y * factor,
@@ -170,7 +157,6 @@ function quaternionFromFrame(frame) {
       z: 0.25 * scale
     };
   }
-
   return normalizeQuaternion(quaternion);
 }
 
@@ -208,15 +194,9 @@ function frameAxesFromQuaternion(quaternion) {
 function slerpQuaternion(from, to, alpha) {
   let target = to;
   let cosine = quaternionDot(from, target);
-
   if (cosine < 0) {
     cosine = -cosine;
-    target = {
-      x: -target.x,
-      y: -target.y,
-      z: -target.z,
-      w: -target.w
-    };
+    target = { x: -target.x, y: -target.y, z: -target.z, w: -target.w };
   }
 
   if (cosine > 0.9995) {
@@ -232,7 +212,6 @@ function slerpQuaternion(from, to, alpha) {
   const sine = Math.sin(angle);
   const fromWeight = Math.sin((1 - alpha) * angle) / sine;
   const toWeight = Math.sin(alpha * angle) / sine;
-
   return normalizeQuaternion({
     x: from.x * fromWeight + target.x * toWeight,
     y: from.y * fromWeight + target.y * toWeight,
@@ -257,7 +236,11 @@ export class WristFrameStabilizer {
       gapResetMs: options.gapResetMs || 500,
       jumpRejectDegrees: options.jumpRejectDegrees || 100,
       jumpConfirmFrames: options.jumpConfirmFrames || 3,
-      jumpConfirmToleranceDegrees: options.jumpConfirmToleranceDegrees || 30
+      jumpConfirmToleranceDegrees: options.jumpConfirmToleranceDegrees || 30,
+      relocalizeDegrees: options.relocalizeDegrees || 110,
+      relocalizeConfirmFrames: options.relocalizeConfirmFrames || 6,
+      relocalizeToleranceDegrees: options.relocalizeToleranceDegrees || 24,
+      relocalizeLockFrames: options.relocalizeLockFrames || 10
     };
     this.reset();
   }
@@ -280,6 +263,10 @@ export class WristFrameStabilizer {
     this.jumpRejected = false;
     this.pendingJumpQuaternion = null;
     this.pendingJumpFrames = 0;
+    this.relocalizeCandidateQuaternion = null;
+    this.relocalizePendingFrames = 0;
+    this.relocalizeLockFramesRemaining = 0;
+    this.relocalized = false;
   }
 
   update(frame, screenOrigin, overlayScale, timestampMilliseconds) {
@@ -289,74 +276,133 @@ export class WristFrameStabilizer {
       ? timestampMilliseconds
       : performance.now();
 
-    // Si la mano ha estado fuera medio segundo, la siguiente detección arranca limpia.
-    // Así un estado erróneo no puede quedarse enganchado al volver a entrar en cámara.
     if (this.lastTimestamp !== null && timestamp - this.lastTimestamp > this.options.gapResetMs) {
       this.reset();
     }
 
-    let currentQuaternion = quaternionFromFrame(frame);
+    const directQuaternion = quaternionFromFrame(frame);
+    let currentQuaternion = directQuaternion;
     const currentScreenOrigin = copyVector(screenOrigin);
     const currentFrameOrigin = copyVector(frame.origin);
+
     this.axisFlipCorrected = false;
     this.axisFlipAxis = "";
     this.jumpRejected = false;
+    this.relocalized = false;
 
     if (this.filteredQuaternion) {
-      // MediaPipe puede devolver de golpe la misma tríada con dos ejes invertidos,
-      // que visualmente equivale a un giro exacto de 180°. Probamos las tres
-      // ambigüedades posibles y elegimos siempre la que mantiene continuidad.
-      const candidates = [
-        { axis: "", quaternion: currentQuaternion },
-        { axis: "X", quaternion: quaternionFromFrame(flipFrameAroundAxis(frame, "X")) },
-        { axis: "Y", quaternion: quaternionFromFrame(flipFrameAroundAxis(frame, "Y")) },
-        { axis: "Z", quaternion: quaternionFromFrame(flipFrameAroundAxis(frame, "Z")) }
-      ];
-
-      let best = candidates[0];
-      let bestContinuity = Math.abs(quaternionDot(this.filteredQuaternion, best.quaternion));
-      for (let index = 1; index < candidates.length; index += 1) {
-        const continuity = Math.abs(quaternionDot(
-          this.filteredQuaternion,
-          candidates[index].quaternion
-        ));
-        if (continuity > bestContinuity) {
-          best = candidates[index];
-          bestContinuity = continuity;
-        }
-      }
-
-      currentQuaternion = best.quaternion;
-      if (best.axis) {
-        this.axisFlipCorrected = true;
-        this.axisFlipAxis = best.axis;
-      }
-
-      // Un salto enorme que no sea una simple inversión de ejes no se acepta por
-      // un solo frame. Debe repetirse tres frames seguidos antes de considerarlo real.
-      const jumpDegrees = quaternionAngleDegrees(this.filteredQuaternion, currentQuaternion);
-      if (jumpDegrees > this.options.jumpRejectDegrees) {
-        const samePendingJump = this.pendingJumpQuaternion &&
-          quaternionAngleDegrees(this.pendingJumpQuaternion, currentQuaternion) <=
-            this.options.jumpConfirmToleranceDegrees;
-
-        if (samePendingJump) {
-          this.pendingJumpFrames += 1;
-        } else {
-          this.pendingJumpQuaternion = currentQuaternion;
-          this.pendingJumpFrames = 1;
-        }
-
-        if (this.pendingJumpFrames < this.options.jumpConfirmFrames) {
-          currentQuaternion = this.filteredQuaternion;
-          this.jumpRejected = true;
-        } else {
-          this.pendingJumpQuaternion = null;
-          this.pendingJumpFrames = 0;
-        }
-      } else {
+      // Durante unos frames después de reenganchar confiamos en la referencia
+      // absoluta cruda para que la continuidad no vuelva a arrastrarnos a la rama mala.
+      if (this.relocalizeLockFramesRemaining > 0) {
+        currentQuaternion = directQuaternion;
+        this.relocalizeLockFramesRemaining -= 1;
         this.pendingJumpQuaternion = null;
         this.pendingJumpFrames = 0;
+        this.relocalizeCandidateQuaternion = null;
+        this.relocalizePendingFrames = 0;
+      } else {
+        // Watchdog absoluto: si MediaPipe insiste de forma coherente en una orientación
+        // muy distinta de la que el filtro está manteniendo, acumulamos evidencia.
+        const absoluteDisagreement = quaternionAngleDegrees(
+          this.filteredQuaternion,
+          directQuaternion
+        );
+
+        if (absoluteDisagreement > this.options.relocalizeDegrees) {
+          const coherentAbsolute = this.relocalizeCandidateQuaternion &&
+            quaternionAngleDegrees(
+              this.relocalizeCandidateQuaternion,
+              directQuaternion
+            ) <= this.options.relocalizeToleranceDegrees;
+
+          if (coherentAbsolute) {
+            this.relocalizePendingFrames += 1;
+            this.relocalizeCandidateQuaternion = slerpQuaternion(
+              this.relocalizeCandidateQuaternion,
+              directQuaternion,
+              0.35
+            );
+          } else {
+            this.relocalizeCandidateQuaternion = directQuaternion;
+            this.relocalizePendingFrames = 1;
+          }
+        } else {
+          this.relocalizeCandidateQuaternion = null;
+          this.relocalizePendingFrames = 0;
+        }
+
+        if (this.relocalizePendingFrames >= this.options.relocalizeConfirmFrames) {
+          // Reenganche duro: reseteamos sólo la parte angular, sin perder posición,
+          // escala ni detección de mano. Así el reloj recupera su rama correcta solo.
+          currentQuaternion = directQuaternion;
+          this.filteredQuaternion = directQuaternion;
+          this.rawQuaternion = directQuaternion;
+          this.angularVelocity = { x: 0, y: 0, z: 0 };
+          this.angularSpeed = 0;
+          this.pendingJumpQuaternion = null;
+          this.pendingJumpFrames = 0;
+          this.relocalizeCandidateQuaternion = null;
+          this.relocalizePendingFrames = 0;
+          this.relocalizeLockFramesRemaining = this.options.relocalizeLockFrames;
+          this.relocalized = true;
+        } else {
+          // Protección normal contra las tres ambigüedades exactas de 180°.
+          const candidates = [
+            { axis: "", quaternion: directQuaternion },
+            { axis: "X", quaternion: quaternionFromFrame(flipFrameAroundAxis(frame, "X")) },
+            { axis: "Y", quaternion: quaternionFromFrame(flipFrameAroundAxis(frame, "Y")) },
+            { axis: "Z", quaternion: quaternionFromFrame(flipFrameAroundAxis(frame, "Z")) }
+          ];
+
+          let best = candidates[0];
+          let bestContinuity = Math.abs(quaternionDot(this.filteredQuaternion, best.quaternion));
+          for (let index = 1; index < candidates.length; index += 1) {
+            const continuity = Math.abs(quaternionDot(
+              this.filteredQuaternion,
+              candidates[index].quaternion
+            ));
+            if (continuity > bestContinuity) {
+              best = candidates[index];
+              bestContinuity = continuity;
+            }
+          }
+
+          currentQuaternion = best.quaternion;
+          if (best.axis) {
+            this.axisFlipCorrected = true;
+            this.axisFlipAxis = best.axis;
+          }
+
+          const jumpDegrees = quaternionAngleDegrees(
+            this.filteredQuaternion,
+            currentQuaternion
+          );
+          if (jumpDegrees > this.options.jumpRejectDegrees) {
+            const samePendingJump = this.pendingJumpQuaternion &&
+              quaternionAngleDegrees(
+                this.pendingJumpQuaternion,
+                currentQuaternion
+              ) <= this.options.jumpConfirmToleranceDegrees;
+
+            if (samePendingJump) {
+              this.pendingJumpFrames += 1;
+            } else {
+              this.pendingJumpQuaternion = currentQuaternion;
+              this.pendingJumpFrames = 1;
+            }
+
+            if (this.pendingJumpFrames < this.options.jumpConfirmFrames) {
+              currentQuaternion = this.filteredQuaternion;
+              this.jumpRejected = true;
+            } else {
+              this.pendingJumpQuaternion = null;
+              this.pendingJumpFrames = 0;
+            }
+          } else {
+            this.pendingJumpQuaternion = null;
+            this.pendingJumpFrames = 0;
+          }
+        }
       }
     }
 
@@ -369,7 +415,6 @@ export class WristFrameStabilizer {
       this.filteredFrameOrigin = currentFrameOrigin;
       this.rawScale = overlayScale;
       this.filteredScale = overlayScale;
-
       return this.result(1, 1, 1);
     }
 
@@ -404,6 +449,7 @@ export class WristFrameStabilizer {
       this.angularVelocity.y,
       this.angularVelocity.z
     );
+
     const positionSpeed = Math.hypot(
       this.positionVelocity.x,
       this.positionVelocity.y,
@@ -429,6 +475,7 @@ export class WristFrameStabilizer {
       scaleSpeed,
       this.options.scaleDeadband
     );
+
     const orientationAlpha = smoothingAlpha(orientationCutoff, deltaSeconds);
     const positionAlpha = smoothingAlpha(positionCutoff, deltaSeconds);
     const scaleAlpha = smoothingAlpha(scaleCutoff, deltaSeconds);
@@ -477,7 +524,10 @@ export class WristFrameStabilizer {
         axisFlipCorrected: this.axisFlipCorrected,
         axisFlipAxis: this.axisFlipAxis,
         jumpRejected: this.jumpRejected,
-        jumpPendingFrames: this.pendingJumpFrames
+        jumpPendingFrames: this.pendingJumpFrames,
+        relocalized: this.relocalized,
+        relocalizePendingFrames: this.relocalizePendingFrames,
+        relocalizeLockFrames: this.relocalizeLockFramesRemaining
       }
     };
   }
