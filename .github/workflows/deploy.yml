@@ -1,12 +1,11 @@
-name: Deploy AMURA AR to Cloudflare Pages
+name: Package Claude V1.8
 
 on:
   push:
-    branches: [main]
-  workflow_dispatch:
+    branches: [package/claude-v1-8]
 
 jobs:
-  deploy:
+  package:
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -19,11 +18,15 @@ jobs:
         with:
           node-version: '22'
 
-      - name: Build current lab
-        run: npm run build
+      - name: Build complete Cloudflare package
+        run: |
+          npm run build
+          cd dist
+          zip -r ../AMURA_CLAUDE_V1_8_CLOUDFLARE.zip .
 
-      - name: Deploy to existing Cloudflare Pages project
-        run: npx --yes wrangler@latest pages deploy dist --project-name=amura-engine-2 --branch=main
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      - name: Upload package
+        uses: actions/upload-artifact@v4
+        with:
+          name: amura-claude-v1-8-cloudflare
+          path: AMURA_CLAUDE_V1_8_CLOUDFLARE.zip
+          if-no-files-found: error
