@@ -96,9 +96,9 @@ function createWristOccluder() {
   wristOccluderMaterial = new MeshBasicMaterial({
     color: 0x8d6cff,
     transparent: true,
-    opacity: 0.36,
+    opacity: 0.30,
     depthTest: true,
-    depthWrite: true
+    depthWrite: false
   });
 
   wristOccluder = new Mesh(geometry, wristOccluderMaterial);
@@ -112,9 +112,10 @@ function createWristOccluder() {
 function updateWristOccluder() {
   if (!wristOccluder || !wristOccluderMaterial) return;
 
-  const mode = Math.max(0, Math.min(2, Math.round(Number(tuning.occluderMode) || 0)));
+  const mode = Math.max(0, Math.min(3, Math.round(Number(tuning.occluderMode) || 0)));
   if (mode === 0) {
     wristOccluder.visible = false;
+    occluderModeApplied = 0;
     return;
   }
 
@@ -136,12 +137,27 @@ function updateWristOccluder() {
   );
 
   if (mode !== occluderModeApplied) {
-    const depthOnly = mode === 2;
-    wristOccluderMaterial.colorWrite = !depthOnly;
-    wristOccluderMaterial.transparent = !depthOnly;
-    wristOccluderMaterial.opacity = depthOnly ? 1 : 0.36;
+    if (mode === 1) {
+      // TRANSPARENTE: sirve para colocar la cápsula sin tapar el reloj.
+      wristOccluderMaterial.colorWrite = true;
+      wristOccluderMaterial.transparent = true;
+      wristOccluderMaterial.opacity = 0.30;
+      wristOccluderMaterial.depthWrite = false;
+    } else if (mode === 2) {
+      // SÓLIDA: muestra la geometría completa para comprobar su volumen real.
+      wristOccluderMaterial.colorWrite = true;
+      wristOccluderMaterial.transparent = false;
+      wristOccluderMaterial.opacity = 1;
+      wristOccluderMaterial.depthWrite = true;
+    } else {
+      // OCLUSIÓN: no dibuja color, pero sí profundidad. La cámara sigue mostrando
+      // el brazo real mientras esta cápsula oculta las partes 3D del reloj detrás.
+      wristOccluderMaterial.colorWrite = false;
+      wristOccluderMaterial.transparent = false;
+      wristOccluderMaterial.opacity = 1;
+      wristOccluderMaterial.depthWrite = true;
+    }
     wristOccluderMaterial.depthTest = true;
-    wristOccluderMaterial.depthWrite = true;
     wristOccluderMaterial.needsUpdate = true;
     occluderModeApplied = mode;
   }
