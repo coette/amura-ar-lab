@@ -17,7 +17,8 @@
     <script type="importmap">
       {
         "imports": {
-          "./wrist-watch.js?v=11.2": "./wrist-watch-ar03.js?v=ar03.0",
+          "./wrist-watch.js?v=11.2": "./wrist-watch-ar03.js?v=ar03.1",
+          "./wrist-watch.js?v=ar02.2": "./wrist-watch.js?v=ar03.1-base",
           "./wrist-stabilizer.js?v=11.2": "./wrist-stabilizer.js?v=11.3.0",
           "./tuner.js?v=11.2": "./tuner.js?v=11.3.0",
           "./wrist-frame.js?v=11.2": "./wrist-frame.js?v=11.3.0",
@@ -25,7 +26,8 @@
         }
       }
     </script>
-    <script src="hand-tracking.js?v=ar03.0" type="module"></script>
+    <script src="watch-x-control.js?v=ar03.1" defer></script>
+    <script src="hand-tracking.js?v=ar03.1" type="module"></script>
   </head>
   <body data-status="idle" data-facing="environment" data-tracking="idle">
     <main class="camera-lab">
@@ -75,7 +77,7 @@
         <p class="eyebrow">PRIMER OBJETO 3D</p>
         <h1 id="cameraTitle">A1 · AR-03 · EJE ANTEBRAZO</h1>
         <p id="statusMessage" class="lead">
-          AR-02 intacta · reloj y muñeca comparten P0 y orientan +X con el borde del antebrazo.
+          Tríada y muñeca permanecen en P0 · reloj con prueba de posición X 0 / −24 mm.
         </p>
         <p class="privacy">
           El análisis ocurre en este dispositivo. Este laboratorio no almacena imágenes.
@@ -130,6 +132,11 @@
         <button id="forearmEdgeButton" class="control-button primary-control" type="button" aria-pressed="true">
           <span class="control-label">BORDE</span>
           <span id="forearmEdgeValue" class="control-value">OCULTAR</span>
+        </button>
+
+        <button id="watchXButton" class="control-button" type="button" aria-pressed="false">
+          <span class="control-label">POS X</span>
+          <span id="watchXValue" class="control-value">0 mm</span>
         </button>
 
         <button id="switchCameraButton" class="control-button primary-control" type="button" hidden>
