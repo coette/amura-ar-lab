@@ -179,7 +179,7 @@ function updateVirtualWristAndWatch() {
   if (DIRECT_P0_TEST_MODE) {
     wristOccluder.scale.set(width / 2, length / 4, thickness / 2);
     wristOccluder.position.set(0, 0, -thickness / 2);
-    wristOccluder.rotation.set(0, 0, 0);
+    wristOccluder.rotation.set(0, 0, Math.PI / 2);
 
     // El reloj conserva íntegra la referencia estable AR-01.
     if (watchAnchor && watchModel) {
