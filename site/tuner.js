@@ -31,7 +31,8 @@ export const tuning = {
   occluderZmm: -20,
   occluderRotX: 0,
   occluderRotY: 0,
-  occluderRotZ: 0
+  occluderRotZ: 0,
+  watchVisible: 1
 };
 
 const GROUPS = [
@@ -59,7 +60,8 @@ const GROUPS = [
       { key: "occluderRotX", label: "Giro X", min: -90, max: 90, step: 1, unit: "°" },
       { key: "occluderRotY", label: "Giro Y", min: -90, max: 90, step: 1, unit: "°" },
       { key: "occluderRotZ", label: "Giro Z", min: -90, max: 90, step: 1, unit: "°" },
-      { key: "occluderMode", label: "Aspecto / función", choices: ["OFF", "TRANSPARENTE", "SÓLIDA", "OCLUSIÓN"] }
+      { key: "occluderMode", label: "Aspecto / función", choices: ["OFF", "TRANSPARENTE", "SÓLIDA", "OCLUSIÓN"] },
+      { key: "watchVisible", label: "Reloj", choices: ["OCULTAR RELOJ", "MOSTRAR RELOJ"] }
     ]
   },
   {
