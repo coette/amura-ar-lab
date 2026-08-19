@@ -1,0 +1,30 @@
+name: Export full AMURA AR source for Claude
+
+on:
+  push:
+    branches:
+      - export/claude-full-2026-08-19
+
+permissions:
+  contents: read
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact production main
+        uses: actions/checkout@v4
+        with:
+          ref: 287a74173ba78e2040317596872f933fc413e379
+          fetch-depth: 0
+
+      - name: Build full repository ZIP
+        run: git archive --format=zip --output=AMURA_AR_FULL_287a7417.zip HEAD
+
+      - name: Upload ZIP
+        uses: actions/upload-artifact@v4
+        with:
+          name: AMURA_AR_FULL_287a7417
+          path: AMURA_AR_FULL_287a7417.zip
+          compression-level: 0
+          retention-days: 1
