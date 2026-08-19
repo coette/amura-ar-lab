@@ -1,65 +1,41 @@
 /**
- * AMURA · Pose métrica de muñeca
+ * AMURA · Pose P0 directa V11.3
  *
- * Sustituye el camino ortográfico por una traslación métrica aproximada y una
- * cámara perspectiva. La orientación final procede siempre del modo de giro
- * seleccionado en el laboratorio para que posición y giro no usen dos marcos
- * incompatibles.
+ * Regla de esta prueba:
+ *   1) P0 manda la posición visual del centro del fondo.
+ *   2) La profundidad sólo decide perspectiva/escala.
+ *   3) La orientación se calcula fuera, con P0/P5/P17.
  *
- * MediaPipe entrega dos cosas a la vez:
- *   - landmarks       → posición en la imagen, normalizada
- *   - worldLandmarks  → la MISMA mano en METROS, centrada en su origen
- *
- * Los worldLandmarks dan la forma y la orientación reales, pero no dicen dónde
- * está la mano respecto a la cámara. Esa traslación se recupera cruzando ambos
- * conjuntos contra la focal del objetivo: es un problema de perspectiva de tres
- * puntos resuelto por mínimos cuadrados, que con la orientación ya conocida se
- * reduce a un sistema lineal. De ahí sale la profundidad real.
- *
- * La escala visual sale de la distancia estimada. No se presenta como una
- * calibración industrial: la focal del navegador y la escala inferida por el
- * modelo siguen siendo aproximaciones y por eso permanecen diagnosticables.
+ * Por tanto ya no resolvemos una traslación XYZ libre mediante mínimos
+ * cuadrados. Estimamos una única profundidad robusta a partir del tamaño
+ * aparente de varios segmentos de la palma y colocamos P0 sobre su rayo de
+ * cámara. Así un error de escala no puede desplazar lateralmente el reloj.
  */
 
 const EPSILON = 1e-9;
 
-function sub(a, b) { return { x: a.x - b.x, y: a.y - b.y, z: a.z - b.z }; }
-function dot(a, b) { return a.x * b.x + a.y * b.y + a.z * b.z; }
-function cross(a, b) {
-  return {
-    x: a.y * b.z - a.z * b.y,
-    y: a.z * b.x - a.x * b.z,
-    z: a.x * b.y - a.y * b.x
-  };
-}
-function scale(a, k) { return { x: a.x * k, y: a.y * k, z: a.z * k }; }
-function len(a) { return Math.hypot(a.x, a.y, a.z); }
-function norm(a) {
-  const l = len(a);
-  return l < EPSILON ? null : scale(a, 1 / l);
-}
-function mean(points, indices) {
-  let x = 0, y = 0, z = 0;
-  indices.forEach((i) => { x += points[i].x; y += points[i].y; z += points[i].z; });
-  const k = 1 / indices.length;
-  return { x: x * k, y: y * k, z: z * k };
+function sub(a, b) {
+  return { x: a.x - b.x, y: a.y - b.y, z: a.z - b.z };
 }
 
-/**
- * Focal en píxeles a partir del campo de visión vertical.
- * Los objetivos principales de móvil rondan un FOV vertical de 60° en vídeo
- * 16:9; es una aproximación, pero errar 5° mueve la profundidad menos que
- * cualquier otro término del sistema.
- */
+function len(a) {
+  return Math.hypot(a.x, a.y, a.z);
+}
+
+function median(values) {
+  if (!values.length) return 0;
+  const sorted = values.slice().sort((a, b) => a - b);
+  const middle = Math.floor(sorted.length / 2);
+  return sorted.length % 2
+    ? sorted[middle]
+    : (sorted[middle - 1] + sorted[middle]) * 0.5;
+}
+
 export function focalFromFov(imageHeight, fovYDegrees) {
   const fov = (Number(fovYDegrees) || 60) * Math.PI / 180;
   return (imageHeight * 0.5) / Math.tan(fov * 0.5);
 }
 
-/**
- * Focal en píxeles desde el FOV diagonal. A diferencia del FOV vertical, el
- * valor diagonal sigue siendo coherente cuando el usuario gira el dispositivo.
- */
 export function focalFromDiagonalFov(imageWidth, imageHeight, fovDegrees) {
   const diagonal = Math.hypot(imageWidth, imageHeight);
   const fov = (Number(fovDegrees) || 73) * Math.PI / 180;
@@ -67,192 +43,152 @@ export function focalFromDiagonalFov(imageWidth, imageHeight, fovDegrees) {
 }
 
 /**
- * Base ortonormal de la muñeca en el espacio métrico de MediaPipe.
- *   xAxis → 9→3 (transversal)
- *   yAxis → 12→6 (muñeca hacia nudillos)
- *   zAxis → fondo→cristal
- * Es la misma convención que el GLB y wrist-frame.js.
+ * Se conserva por compatibilidad/diagnóstico. La orientación que llega al
+ * reloj la sustituye hand-tracking.js por buildWristFrame(P0,P5,P17).
  */
 export function metricWristBasis(worldPoints, physicalHand) {
   if (!Array.isArray(worldPoints) || worldPoints.length < 18) return null;
+  const p0 = worldPoints[0];
+  const p5 = worldPoints[5];
+  const p17 = worldPoints[17];
+  if (!p0 || !p5 || !p17) return null;
 
-  const origin = worldPoints[0];
-  const knuckles = mean(worldPoints, [5, 9, 13, 17]);
-  const longitudinal = sub(knuckles, origin);
-  const yAxis = norm(longitudinal);
-  if (!yAxis) return null;
+  const mid = {
+    x: (p5.x + p17.x) * 0.5,
+    y: (p5.y + p17.y) * 0.5,
+    z: (p5.z + p17.z) * 0.5
+  };
+  const longitudinal = sub(mid, p0);
+  const longitudinalLength = len(longitudinal);
+  if (longitudinalLength < EPSILON) return null;
+  const xAxis = {
+    x: longitudinal.x / longitudinalLength,
+    y: longitudinal.y / longitudinalLength,
+    z: longitudinal.z / longitudinalLength
+  };
 
   const transverse = physicalHand === "right"
-    ? sub(worldPoints[17], worldPoints[5])
-    : sub(worldPoints[5], worldPoints[17]);
-  const withoutY = sub(transverse, scale(yAxis, dot(transverse, yAxis)));
-  let xAxis = norm(withoutY);
-  if (!xAxis) return null;
+    ? sub(p17, p5)
+    : sub(p5, p17);
+  const dotXY = transverse.x * xAxis.x + transverse.y * xAxis.y + transverse.z * xAxis.z;
+  const yRaw = {
+    x: transverse.x - xAxis.x * dotXY,
+    y: transverse.y - xAxis.y * dotXY,
+    z: transverse.z - xAxis.z * dotXY
+  };
+  const yLength = len(yRaw);
+  if (yLength < EPSILON) return null;
+  const yAxis = { x: yRaw.x / yLength, y: yRaw.y / yLength, z: yRaw.z / yLength };
+  const zRaw = {
+    x: xAxis.y * yAxis.z - xAxis.z * yAxis.y,
+    y: xAxis.z * yAxis.x - xAxis.x * yAxis.z,
+    z: xAxis.x * yAxis.y - xAxis.y * yAxis.x
+  };
+  const zLength = len(zRaw);
+  if (zLength < EPSILON) return null;
+  const zAxis = { x: zRaw.x / zLength, y: zRaw.y / zLength, z: zRaw.z / zLength };
 
-  const zAxis = norm(cross(xAxis, yAxis));
-  if (!zAxis) return null;
-  xAxis = norm(cross(yAxis, zAxis));
-  if (!xAxis) return null;
-
-  return { xAxis, yAxis, zAxis, armAxis: norm(longitudinal) };
+  return { xAxis, yAxis, zAxis, armAxis: xAxis };
 }
 
 /**
- * Traslación métrica de la mano respecto a la cámara.
+ * Profundidad estimada exclusivamente desde escala.
  *
- * Para cada punto i:  (X_i + T) proyectado = pixel observado
- * Con X_i conocido (worldLandmarks rotados a cámara) queda un sistema lineal
- * de dos ecuaciones por punto en las tres incógnitas de T. Se resuelve por
- * mínimos cuadrados sobre las ecuaciones normales 3x3.
+ * Para cada pareja usamos la longitud de su componente XY en worldLandmarks
+ * (metros) y la longitud observada en píxeles. Esto compensa el acortamiento
+ * por giro: cuando un segmento apunta hacia cámara, su proyección 3D XY y su
+ * proyección 2D se reducen juntas. La mediana de varias parejas evita depender
+ * de P5-P17 justo cerca del perfil.
  */
-export function solveTranslation(cameraPoints, pixelPoints, focal, cx, cy) {
-  const count = Math.min(cameraPoints.length, pixelPoints.length);
-  if (count < 3) return null;
-
-  const A = [0, 0, 0, 0, 0, 0, 0, 0, 0];
-  const b = [0, 0, 0];
-
-  for (let i = 0; i < count; i++) {
-    const X = cameraPoints[i];
-    const u = pixelPoints[i].x - cx;
-    const v = pixelPoints[i].y - cy;
-
-    // fila u:  f*Tx - u*Tz = u*X.z - f*X.x
-    // fila v:  f*Ty - v*Tz = v*X.z - f*X.y
-    const rows = [
-      { r: [focal, 0, -u], s: u * X.z - focal * X.x },
-      { r: [0, focal, -v], s: v * X.z - focal * X.y }
-    ];
-
-    rows.forEach(({ r, s }) => {
-      for (let m = 0; m < 3; m++) {
-        for (let n = 0; n < 3; n++) A[m * 3 + n] += r[m] * r[n];
-        b[m] += r[m] * s;
-      }
-    });
-  }
-
-  const solved = solve3x3(A, b);
-  if (!solved) return null;
-  if (!Number.isFinite(solved.z) || solved.z <= 0.02 || solved.z > 6) return null;
-
-  let squaredError = 0;
-  for (let i = 0; i < count; i++) {
-    const X = cameraPoints[i];
-    const z = X.z + solved.z;
-    if (z <= EPSILON) return null;
-    const projectedX = focal * (X.x + solved.x) / z + cx;
-    const projectedY = focal * (X.y + solved.y) / z + cy;
-    const dx = projectedX - pixelPoints[i].x;
-    const dy = projectedY - pixelPoints[i].y;
-    squaredError += dx * dx + dy * dy;
-  }
-  solved.rmsPixels = Math.sqrt(squaredError / count);
-  return solved;
-}
-
-function solve3x3(A, b) {
-  const m = [
-    [A[0], A[1], A[2], b[0]],
-    [A[3], A[4], A[5], b[1]],
-    [A[6], A[7], A[8], b[2]]
+function estimateDepthMm(worldPoints, imagePoints, focal, imageWidth, imageHeight) {
+  const pairs = [
+    [0, 9],
+    [0, 5],
+    [0, 17],
+    [5, 17],
+    [5, 9],
+    [9, 13],
+    [13, 17]
   ];
+  const estimates = [];
 
-  for (let col = 0; col < 3; col++) {
-    let pivot = col;
-    for (let row = col + 1; row < 3; row++) {
-      if (Math.abs(m[row][col]) > Math.abs(m[pivot][col])) pivot = row;
-    }
-    if (Math.abs(m[pivot][col]) < 1e-12) return null;
-    if (pivot !== col) { const t = m[pivot]; m[pivot] = m[col]; m[col] = t; }
+  for (const [a, b] of pairs) {
+    const wa = worldPoints[a];
+    const wb = worldPoints[b];
+    const ia = imagePoints[a];
+    const ib = imagePoints[b];
+    if (!wa || !wb || !ia || !ib) continue;
 
-    const d = m[col][col];
-    for (let k = col; k < 4; k++) m[col][k] /= d;
+    const worldProjectedMm = Math.hypot(
+      (wa.x - wb.x) * 1000,
+      (wa.y - wb.y) * 1000
+    );
+    const pixelDistance = Math.hypot(
+      (ia.x - ib.x) * imageWidth,
+      (ia.y - ib.y) * imageHeight
+    );
 
-    for (let row = 0; row < 3; row++) {
-      if (row === col) continue;
-      const factor = m[row][col];
-      if (!factor) continue;
-      for (let k = col; k < 4; k++) m[row][k] -= factor * m[col][k];
+    if (worldProjectedMm < 3 || pixelDistance < 6) continue;
+    const depth = focal * worldProjectedMm / pixelDistance;
+    if (Number.isFinite(depth) && depth >= 120 && depth <= 1800) {
+      estimates.push(depth);
     }
   }
 
-  return { x: m[0][3], y: m[1][3], z: m[2][3] };
+  return median(estimates);
 }
 
-/**
- * Pose métrica completa de la muñeca.
- * Devuelve milímetros y una base ortonormal en espacio cámara (Y arriba,
- * Z hacia el observador), lista para three.js.
- */
 export function solveMetricWristPose(options) {
   const worldPoints = options.worldPoints;
   const imagePoints = options.imagePoints;
   const physicalHand = options.physicalHand;
-  const imageWidth = options.imageWidth;
-  const imageHeight = options.imageHeight;
-  const focal = options.focal;
+  const imageWidth = Math.max(1, Number(options.imageWidth) || 1);
+  const imageHeight = Math.max(1, Number(options.imageHeight) || 1);
+  const focal = Math.max(1, Number(options.focal) || 1);
 
   if (!Array.isArray(worldPoints) || worldPoints.length < 18) return null;
   if (!Array.isArray(imagePoints) || imagePoints.length < 18) return null;
+  if (!imagePoints[0]) return null;
+
+  const depthMm = estimateDepthMm(
+    worldPoints,
+    imagePoints,
+    focal,
+    imageWidth,
+    imageHeight
+  );
+  if (!depthMm) return null;
+
+  const p0 = imagePoints[0];
+  const u = p0.x * imageWidth;
+  const v = p0.y * imageHeight;
+  const cx = imageWidth * 0.5;
+  const cy = imageHeight * 0.5;
+
+  // Punto 3D sobre el rayo exacto que atraviesa P0.
+  const positionMm = {
+    x: (u - cx) * depthMm / focal,
+    y: -(v - cy) * depthMm / focal,
+    z: -depthMm
+  };
 
   const basis = metricWristBasis(worldPoints, physicalHand);
   if (!basis) return null;
+  const toThree = (axis) => ({ x: axis.x, y: -axis.y, z: -axis.z });
 
-  // Los worldLandmarks ya vienen orientados como la mano se ve; sólo hace
-  // falta la traslación. Se usan los puntos estables de la palma: la muñeca y
-  // las cuatro bases de los dedos. Las puntas se descartan porque se mueven.
-  const indices = [0, 5, 9, 13, 17];
-  const cameraPoints = [];
-  const pixelPoints = [];
-  indices.forEach((i) => {
-    if (!worldPoints[i] || !imagePoints[i]) return;
-    cameraPoints.push({
-      x: worldPoints[i].x,
-      y: worldPoints[i].y,
-      z: worldPoints[i].z
-    });
-    pixelPoints.push({
-      x: imagePoints[i].x * imageWidth,
-      y: imagePoints[i].y * imageHeight
-    });
-  });
-
-  const translation = solveTranslation(
-    cameraPoints,
-    pixelPoints,
-    focal,
-    imageWidth * 0.5,
-    imageHeight * 0.5
-  );
-  if (!translation) return null;
-
-  const wristMetres = {
-    x: worldPoints[0].x + translation.x,
-    y: worldPoints[0].y + translation.y,
-    z: worldPoints[0].z + translation.z
-  };
-
-  // Distancia entre los MCP de índice y meñique. Es anchura de palma, no
-  // anchura anatómica de muñeca; se conserva como referencia de estabilidad.
   const palmWidthMm = len(sub(worldPoints[17], worldPoints[5])) * 1000;
 
-  // A espacio three.js: X igual, Y hacia arriba, Z hacia el observador.
-  const toThree = (v) => ({ x: v.x, y: -v.y, z: -v.z });
-
   return {
-    positionMm: {
-      x: wristMetres.x * 1000,
-      y: -wristMetres.y * 1000,
-      z: -wristMetres.z * 1000
-    },
-    depthMm: wristMetres.z * 1000,
+    positionMm,
+    depthMm,
     palmWidthMm,
-    reprojectionErrorPx: translation.rmsPixels,
+    // En este modo P0 se satisface por construcción; no existe reproyección
+    // libre del origen que pueda desviarlo.
+    reprojectionErrorPx: 0,
     xAxis: toThree(basis.xAxis),
     yAxis: toThree(basis.yAxis),
     zAxis: toThree(basis.zAxis),
-    armAxis: toThree(basis.armAxis),
+    armAxis: toThree(basis.xAxis),
     focal
   };
 }
