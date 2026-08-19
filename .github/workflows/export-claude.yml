@@ -19,12 +19,21 @@ jobs:
           fetch-depth: 0
 
       - name: Build full repository ZIP
-        run: git archive --format=zip --output=AMURA_AR_FULL_287a7417.zip HEAD
+        run: |
+          git archive --format=zip --output=AMURA_AR_FULL_287a7417.zip HEAD
+          mkdir export
+          mv AMURA_AR_FULL_287a7417.zip export/
 
-      - name: Upload ZIP
+      - name: Upload ZIP artifact
         uses: actions/upload-artifact@v4
         with:
           name: AMURA_AR_FULL_287a7417
-          path: AMURA_AR_FULL_287a7417.zip
+          path: export/AMURA_AR_FULL_287a7417.zip
           compression-level: 0
           retention-days: 1
+
+      - name: Publish temporary Cloudflare preview
+        run: npx --yes wrangler@latest pages deploy export --project-name=amura-engine-2 --branch=claude-export
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
