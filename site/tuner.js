@@ -2,8 +2,7 @@
  * AMURA · Panel de ajuste
  *
  * Un solo grupo visible cada vez. Tocas AJUSTES, eliges grupo, y aparecen
- * únicamente esos dos o tres sliders, grandes. Vuelves a tocar y desaparece.
- * Nada permanece en pantalla salvo un botón.
+ * únicamente esos controles. Vuelves a tocar y desaparece.
  */
 
 const STORAGE_KEY = "amura.tuning.v112";
@@ -23,7 +22,7 @@ export const tuning = {
   orientationCutoff: 0.55,
   orientationBeta: 1.8,
   // MUÑECA / OCCLUDER PROCEDURAL
-  occluderMode: 1,      // 0 OFF · 1 VISIBLE · 2 OCCLUDER
+  occluderMode: 1,      // 0 OFF · 1 TRANSPARENTE · 2 SÓLIDA · 3 OCLUSIÓN
   occluderWidthMm: 62,
   occluderThicknessMm: 44,
   occluderLengthMm: 150,
@@ -51,7 +50,7 @@ const GROUPS = [
   },
   {
     id: "wrist", label: "MUÑECA", fields: [
-      { key: "occluderMode", label: "Modo", min: 0, max: 2, step: 1, unit: "", options: ["OFF", "VISIBLE", "OCCLUDER"] },
+      { key: "occluderMode", label: "Aspecto / función", choices: ["OFF", "TRANSPARENTE", "SÓLIDA", "OCLUSIÓN"] },
       { key: "occluderWidthMm", label: "Ancho", min: 30, max: 100, step: 1, unit: " mm" },
       { key: "occluderThicknessMm", label: "Grosor", min: 20, max: 80, step: 1, unit: " mm" },
       { key: "occluderLengthMm", label: "Largo", min: 70, max: 240, step: 2, unit: " mm" },
@@ -94,9 +93,47 @@ function save() {
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(tuning)); } catch (e) { /* modo privado */ }
 }
 
+function ensureRuntimeStyles() {
+  if (document.getElementById("amuraTunerRuntimeStyles")) return;
+  const style = document.createElement("style");
+  style.id = "amuraTunerRuntimeStyles";
+  style.textContent = `
+    body.wrist-tuning-open .topbar,
+    body.wrist-tuning-open .tracking-hud,
+    body.wrist-tuning-open .axis-legend,
+    body.wrist-tuning-open .controls,
+    body.wrist-tuning-open .rotation-modes,
+    body.wrist-tuning-open .diagnostics {
+      display: none !important;
+    }
+    .tuner-choice-row {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 6px;
+    }
+    .tuner-choice {
+      min-height: 40px;
+      padding: 8px 6px;
+      border: 1px solid #3d3160;
+      border-radius: 4px;
+      background: rgba(13,10,22,.92);
+      color: #9b8bc4;
+      font: 700 10px/1 ui-monospace, Menlo, monospace;
+      letter-spacing: .8px;
+    }
+    .tuner-choice.on {
+      border-color: #a992ff;
+      background: #2a2145;
+      color: #fff;
+      box-shadow: inset 0 -3px 0 #a992ff;
+    }
+  `;
+  document.head.appendChild(style);
+}
+
 function displayValue(field) {
   const value = tuning[field.key];
-  if (field.options) return field.options[Math.max(0, Math.min(field.options.length - 1, Math.round(value)))] || "";
+  if (field.choices) return field.choices[Math.max(0, Math.min(field.choices.length - 1, Math.round(value)))] || "";
   if (field.toggle) return field.toggle[value ? 1 : 0];
   const decimals = field.step < 1 ? 2 : 0;
   return value.toFixed(decimals) + field.unit;
@@ -118,18 +155,44 @@ function renderGroup(group) {
     value.textContent = displayValue(field);
     head.append(name, value);
 
-    const input = document.createElement("input");
-    input.type = "range";
-    input.min = field.min; input.max = field.max; input.step = field.step;
-    input.value = tuning[field.key];
-    input.addEventListener("input", () => {
-      tuning[field.key] = Number(input.value);
-      value.textContent = displayValue(field);
-      save();
-      if (onChange) onChange(field.key);
-    });
+    if (field.choices) {
+      const choiceRow = document.createElement("div");
+      choiceRow.className = "tuner-choice-row";
+      const buttons = [];
 
-    row.append(head, input);
+      field.choices.forEach((label, index) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "tuner-choice" + (Math.round(tuning[field.key]) === index ? " on" : "");
+        button.textContent = label;
+        button.addEventListener("click", () => {
+          tuning[field.key] = index;
+          value.textContent = displayValue(field);
+          buttons.forEach((item, itemIndex) => item.classList.toggle("on", itemIndex === index));
+          save();
+          if (onChange) onChange(field.key);
+        });
+        buttons.push(button);
+        choiceRow.appendChild(button);
+      });
+
+      row.append(head, choiceRow);
+    } else {
+      const input = document.createElement("input");
+      input.type = "range";
+      input.min = field.min;
+      input.max = field.max;
+      input.step = field.step;
+      input.value = tuning[field.key];
+      input.addEventListener("input", () => {
+        tuning[field.key] = Number(input.value);
+        value.textContent = displayValue(field);
+        save();
+        if (onChange) onChange(field.key);
+      });
+      row.append(head, input);
+    }
+
     panel.appendChild(row);
   });
 
@@ -150,6 +213,7 @@ function renderGroup(group) {
 
 function render() {
   root.innerHTML = "";
+  document.body.classList.toggle("wrist-tuning-open", openGroup === "wrist");
 
   if (!openGroup) {
     const open = document.createElement("button");
@@ -191,6 +255,7 @@ function render() {
 export function initTuner(changeHandler) {
   onChange = changeHandler;
   load();
+  ensureRuntimeStyles();
   root = document.createElement("div");
   root.id = "tunerRoot";
   document.body.appendChild(root);
