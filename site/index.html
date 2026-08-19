@@ -8,13 +8,13 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="AMURA AR">
     <meta name="mobile-web-app-capable" content="yes">
-    <title>Amura AR · AR-03 · EJE ANTEBRAZO</title>
+    <title>Amura AR · AR-04A · DIAGNÓSTICO MÉTRICO</title>
     <link rel="manifest" href="manifest.webmanifest?v=11.2">
     <link rel="icon" href="icon.svg" type="image/svg+xml">
     <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
     <link rel="stylesheet" href="styles.css?v=11.2">
     <style>
-      /* AR-03 limpio: el tuner completo sigue en código, pero no ocupa interfaz. */
+      /* AR-04A limpio: el tuner completo sigue en código, pero no ocupa interfaz. */
       #tunerRoot { display: none !important; }
     </style>
     <script src="camera.js?v=11.2" defer></script>
@@ -26,13 +26,13 @@
           "./wrist-stabilizer.js?v=11.2": "./wrist-stabilizer.js?v=11.3.0",
           "./tuner.js?v=11.2": "./tuner.js?v=11.3.0",
           "./wrist-frame.js?v=11.2": "./wrist-frame.js?v=11.3.0",
-          "./wrist-pose.js?v=11.2": "./wrist-pose.js?v=11.3.0"
+          "./wrist-pose.js?v=11.2": "./wrist-pose-ar04a.js?v=ar04a.1"
         }
       }
     </script>
     <script src="watch-x-control.js?v=ar03.4" type="module"></script>
     <script src="wrist-mode-control.js?v=ar03.4" type="module"></script>
-    <script src="hand-tracking.js?v=ar03.8" type="module"></script>
+    <script src="hand-tracking.js?v=ar04a.1" type="module"></script>
   </head>
   <body data-status="idle" data-facing="environment" data-tracking="idle">
     <main class="camera-lab">
@@ -56,11 +56,10 @@
         aria-hidden="true"
       ></canvas>
 
-      <!-- OCULTO EN AR-03: conservado para poder reactivarlo sin perder código. -->
       <header class="topbar" style="display:none !important">
         <div>
           <p class="brand">AMURA</p>
-          <p class="phase">AR-03 · EJE ANTEBRAZO</p>
+          <p class="phase">AR-04A · DIAGNÓSTICO MÉTRICO</p>
         </div>
         <div class="status-pill" role="status" aria-live="polite">
           <span class="status-dot" aria-hidden="true"></span>
@@ -68,13 +67,11 @@
         </div>
       </header>
 
-      <!-- Se mantiene: es útil para saber si MediaPipe está detectando o ha perdido la mano. -->
       <div id="trackingHud" class="tracking-hud" role="status" aria-live="polite" hidden>
         <span class="tracking-dot" aria-hidden="true"></span>
         <span id="trackingLabel">MEDIAPIPE EN ESPERA</span>
       </div>
 
-      <!-- OCULTO EN AR-03: la convención de ejes ya está fijada. -->
       <div class="axis-legend" aria-label="Convención de ejes del reloj" style="display:none !important">
         <span class="axis-chip axis-x">+X <small>9→3</small></span>
         <span class="axis-chip axis-y">+Y <small>6→12</small></span>
@@ -83,9 +80,9 @@
 
       <section id="startPanel" class="start-card" aria-labelledby="cameraTitle">
         <p class="eyebrow">PRIMER OBJETO 3D</p>
-        <h1 id="cameraTitle">A1 · AR-03 · EJE ANTEBRAZO</h1>
+        <h1 id="cameraTitle">A1 · AR-04A · DIAGNÓSTICO MÉTRICO</h1>
         <p id="statusMessage" class="lead">
-          MediaPipe continuo · corredor P0 de doble borde · δ retenida sobre Z vivo.
+          Mide qué segmentos alteran falsamente la profundidad al girar la muñeca. El comportamiento aún es el de AR-03.
         </p>
         <p class="privacy">
           El análisis ocurre en este dispositivo. Este laboratorio no almacena imágenes.
@@ -103,7 +100,6 @@
         <p>Esperando permiso de cámara…</p>
       </section>
 
-      <!-- OCULTO EN AR-03: diagnóstico completo disponible si vuelve a hacer falta. -->
       <aside id="diagnosticsPanel" class="diagnostics" aria-label="Diagnóstico de cámara" hidden style="display:none !important">
         <div class="diagnostics-heading">
           <div>
@@ -115,7 +111,6 @@
         <dl id="diagnosticsList"></dl>
       </aside>
 
-      <!-- OCULTO EN AR-03: seguimos usando internamente IMAGE 3D, sin selector visible. -->
       <div class="rotation-modes" role="group" aria-label="Método de giro de muñeca" style="display:none !important">
         <button class="rotation-mode" type="button" data-rotation-mode="world" aria-pressed="false">
           WORLD
@@ -128,38 +123,32 @@
         </button>
       </div>
 
-      <nav class="controls" aria-label="Controles AR-03">
-        <!-- OCULTO EN AR-03: conservamos toda la lógica de diagnóstico. -->
+      <nav class="controls" aria-label="Controles AR-04A">
         <button id="diagnosticsButton" class="control-button" type="button" aria-pressed="false" style="display:none !important">
           <span class="control-label">DIAG</span>
           <span id="fpsValue" class="control-value">DATOS</span>
         </button>
 
-        <!-- ACTIVO: landmarks y tríada durante las pruebas. -->
         <button id="guidesButton" class="control-button primary-control" type="button" aria-pressed="true">
           <span class="control-label">GUÍAS</span>
           <span id="guidesValue" class="control-value">OCULTAR</span>
         </button>
 
-        <!-- ACTIVO: corredor de doble borde del antebrazo. -->
         <button id="forearmEdgeButton" class="control-button primary-control" type="button" aria-pressed="true">
           <span class="control-label">BORDE</span>
           <span id="forearmEdgeValue" class="control-value">OCULTAR</span>
         </button>
 
-        <!-- ACTIVO: modo visual/de profundidad de la muñeca virtual. -->
         <button id="wristModeButton" class="control-button primary-control" type="button" aria-pressed="true">
           <span class="control-label">MUÑECA</span>
           <span id="wristModeValue" class="control-value">TRANSPARENTE</span>
         </button>
 
-        <!-- ACTIVO: ciclo reloj visible 0 mm → visible -24 mm → oculto. -->
         <button id="watchXButton" class="control-button" type="button" aria-pressed="false" aria-label="Reloj visible en X cero">
           <span class="control-label">X RELOJ</span>
           <span id="watchXValue" class="control-value">0 mm</span>
         </button>
 
-        <!-- OCULTOS EN AR-03: conservados para reactivarlos si vuelven a hacer falta. -->
         <button id="switchCameraButton" class="control-button primary-control" type="button" hidden style="display:none !important">
           <span class="control-label">CÁMARA</span>
           <span id="switchCameraValue" class="control-value">FRONTAL</span>
