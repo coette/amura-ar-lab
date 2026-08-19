@@ -1,10 +1,13 @@
 import {
   ACESFilmicToneMapping,
   AmbientLight,
+  CapsuleGeometry,
   DirectionalLight,
   Group,
   HemisphereLight,
   Matrix4,
+  Mesh,
+  MeshBasicMaterial,
   PerspectiveCamera,
   Quaternion,
   REVISION,
@@ -20,6 +23,7 @@ import { tuning } from "./tuner.js?v=11.2";
 const MODEL_URL = "./models/A1-Irontide-AR-pretty-mobile.glb";
 const MODEL_CONFIG_URL = "./models/A1-Irontide-AR-pretty-mobile.json";
 const MODEL_Z_OFFSET_RADIANS = Math.PI / 2;
+const DEG_TO_RAD = Math.PI / 180;
 const DEFAULT_MODEL_CONFIG = {
   asset: "A1-Irontide-AR-pretty-mobile.glb",
   scaleToMillimeters: 1000,
@@ -40,6 +44,9 @@ const axisZ = new Vector3();
 let renderer = null;
 let wristRig = null;
 let watchModel = null;
+let wristOccluder = null;
+let wristOccluderMaterial = null;
+let occluderModeApplied = -1;
 let modelStatus = "en espera";
 let modelError = "";
 let modelPromise = null;
@@ -80,6 +87,66 @@ async function loadModelConfig() {
   return modelConfig;
 }
 
+function createWristOccluder() {
+  if (!wristRig || wristOccluder) return wristOccluder;
+
+  // Cápsula base: radio 1 y tramo recto 2. Su tamaño total base es 2 × 4 × 2.
+  // La deformamos por escala para convertirla en una muñeca elíptica ajustable.
+  const geometry = new CapsuleGeometry(1, 2, 8, 20);
+  wristOccluderMaterial = new MeshBasicMaterial({
+    color: 0x8d6cff,
+    transparent: true,
+    opacity: 0.36,
+    depthTest: true,
+    depthWrite: true
+  });
+
+  wristOccluder = new Mesh(geometry, wristOccluderMaterial);
+  wristOccluder.name = "AMURA_PROCEDURAL_WRIST_OCCLUDER";
+  wristOccluder.renderOrder = -1000;
+  wristOccluder.visible = false;
+  wristRig.add(wristOccluder);
+  return wristOccluder;
+}
+
+function updateWristOccluder() {
+  if (!wristOccluder || !wristOccluderMaterial) return;
+
+  const mode = Math.max(0, Math.min(2, Math.round(Number(tuning.occluderMode) || 0)));
+  if (mode === 0) {
+    wristOccluder.visible = false;
+    return;
+  }
+
+  const width = Math.max(1, Number(tuning.occluderWidthMm) || 62);
+  const thickness = Math.max(1, Number(tuning.occluderThicknessMm) || 44);
+  const length = Math.max(1, Number(tuning.occluderLengthMm) || 150);
+
+  wristOccluder.visible = true;
+  wristOccluder.scale.set(width / 2, length / 4, thickness / 2);
+  wristOccluder.position.set(
+    Number(tuning.occluderXmm) || 0,
+    Number(tuning.occluderYmm) || 0,
+    Number(tuning.occluderZmm) || 0
+  );
+  wristOccluder.rotation.set(
+    (Number(tuning.occluderRotX) || 0) * DEG_TO_RAD,
+    (Number(tuning.occluderRotY) || 0) * DEG_TO_RAD,
+    (Number(tuning.occluderRotZ) || 0) * DEG_TO_RAD
+  );
+
+  if (mode !== occluderModeApplied) {
+    const depthOnly = mode === 2;
+    wristOccluderMaterial.colorWrite = !depthOnly;
+    wristOccluderMaterial.transparent = !depthOnly;
+    wristOccluderMaterial.opacity = depthOnly ? 1 : 0.36;
+    wristOccluderMaterial.depthTest = true;
+    wristOccluderMaterial.depthWrite = true;
+    wristOccluderMaterial.needsUpdate = true;
+    occluderModeApplied = mode;
+  }
+}
+
 function loadWatch() {
   if (watchModel) return Promise.resolve(watchModel);
   if (modelPromise) return modelPromise;
@@ -101,8 +168,7 @@ function loadWatch() {
     // El GLB conserva metros estándar; este nodo lo convierte una sola vez a mm.
     watchModel.scale.setScalar(Number(config.scaleToMillimeters) || 1000);
 
-    // Corrección fija del asset: 90° en el sentido opuesto al ajuste anterior alrededor del Z local,
-    // que es el eje normal a la esfera. El tracking y el rig no se modifican.
+    // Corrección fija del asset respecto a la tríada de seguimiento.
     watchModel.rotateZ(MODEL_Z_OFFSET_RADIANS);
 
     const rootNode = watchModel.getObjectByName(config.rootNode);
@@ -116,6 +182,7 @@ function loadWatch() {
     wristRig.visible = false;
     wristRig.add(watchModel);
     scene.add(wristRig);
+    createWristOccluder();
 
     modelStatus = "listo";
     dracoLoader.dispose();
@@ -238,10 +305,9 @@ export function updateWristWatch(options) {
   );
 
   // El GLB ya está en metros; x1000 lo deja en mm, que es la unidad de escena.
-  // No hay factor de tamaño: si el reloj mide 40 mm, mide 40 mm. Se ve mayor
-  // o menor porque está más cerca o más lejos, como un objeto de verdad.
   wristRig.scale.setScalar(1);
   wristRig.visible = true;
+  updateWristOccluder();
   lastDepthMm = pose.depthMm;
   lastPalmWidthMm = pose.palmWidthMm;
   lastReprojectionErrorPx = pose.reprojectionErrorPx;
@@ -252,6 +318,7 @@ export function updateWristWatch(options) {
 
 export function holdWristWatch() {
   if (!renderer) return state(false);
+  updateWristOccluder();
   renderer.render(scene, camera);
   return state(Boolean(wristRig && wristRig.visible));
 }
