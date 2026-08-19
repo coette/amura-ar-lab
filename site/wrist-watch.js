@@ -136,14 +136,52 @@ function createWristOccluder() {
 function updateVirtualWristAndWatch() {
   if (!wristOccluder || !wristOccluderMaterial) return;
 
-  // V11.3 P0 DIRECTO: el origen del rig ES el centro del fondo.
-  // La muñeca virtual y todos sus offsets quedan fuera de esta prueba para no
-  // contaminar posición, orientación ni escala.
+  const width = Math.max(1, Number(tuning.occluderWidthMm) || 62);
+  const thickness = Math.max(1, Number(tuning.occluderThicknessMm) || 44);
+  const length = Math.max(1, Number(tuning.occluderLengthMm) || 150);
+  const mode = Math.max(
+    0,
+    Math.min(3, Math.round(Number(tuning.occluderMode) || 0))
+  );
+
+  wristOccluder.visible = mode !== 0;
+  if (mode !== occluderModeApplied) {
+    if (mode === 1) {
+      // TRANSPARENTE: sirve para comprobar el volumen sin ocultar el reloj.
+      wristOccluderMaterial.colorWrite = true;
+      wristOccluderMaterial.transparent = true;
+      wristOccluderMaterial.opacity = 0.30;
+      wristOccluderMaterial.depthWrite = false;
+    } else if (mode === 2) {
+      // SÓLIDA: muestra claramente la geometría virtual de la muñeca.
+      wristOccluderMaterial.colorWrite = true;
+      wristOccluderMaterial.transparent = false;
+      wristOccluderMaterial.opacity = 1;
+      wristOccluderMaterial.depthWrite = true;
+    } else if (mode === 3) {
+      // OCLUSIÓN: no pinta color, solo profundidad para tapar el GLB.
+      wristOccluderMaterial.colorWrite = false;
+      wristOccluderMaterial.transparent = false;
+      wristOccluderMaterial.opacity = 1;
+      wristOccluderMaterial.depthWrite = true;
+    }
+
+    wristOccluderMaterial.depthTest = true;
+    wristOccluderMaterial.needsUpdate = true;
+    occluderModeApplied = mode;
+  }
+
+  // AR-02 · MUÑECA
+  // El rig sigue siendo exactamente el de AR-01: origen=P0 y misma tríada.
+  // La cápsula NO tiene pose independiente. Su centro baja medio grosor en -Z,
+  // de modo que su punto más alto (+Z) toca exactamente el origen de la tríada,
+  // que es también AMURA_CASEBACK_CONTACT.
   if (DIRECT_P0_TEST_MODE) {
-    wristOccluder.visible = false;
-    wristOccluder.position.set(0, 0, 0);
+    wristOccluder.scale.set(width / 2, length / 4, thickness / 2);
+    wristOccluder.position.set(0, 0, -thickness / 2);
     wristOccluder.rotation.set(0, 0, 0);
 
+    // El reloj conserva íntegra la referencia estable AR-01.
     if (watchAnchor && watchModel) {
       watchAnchor.quaternion.identity();
       watchAnchor.position.copy(contactOffsetInAnchor).multiplyScalar(-1);
@@ -162,14 +200,7 @@ function updateVirtualWristAndWatch() {
     return;
   }
 
-  const width = Math.max(1, Number(tuning.occluderWidthMm) || 62);
-  const thickness = Math.max(1, Number(tuning.occluderThicknessMm) || 44);
-  const length = Math.max(1, Number(tuning.occluderLengthMm) || 150);
-  const mode = Math.max(
-    0,
-    Math.min(3, Math.round(Number(tuning.occluderMode) || 0))
-  );
-
+  // Ruta antigua conservada fuera de AR-02 por compatibilidad.
   wristOccluder.scale.set(width / 2, length / 4, thickness / 2);
   wristOccluder.position.set(
     Number(tuning.occluderXmm) || 0,
@@ -181,30 +212,6 @@ function updateVirtualWristAndWatch() {
     (Number(tuning.occluderRotY) || 0) * DEG_TO_RAD,
     (Number(tuning.occluderRotZ) || 0) * DEG_TO_RAD
   );
-
-  wristOccluder.visible = mode !== 0;
-  if (mode !== occluderModeApplied) {
-    if (mode === 1) {
-      wristOccluderMaterial.colorWrite = true;
-      wristOccluderMaterial.transparent = true;
-      wristOccluderMaterial.opacity = 0.30;
-      wristOccluderMaterial.depthWrite = false;
-    } else if (mode === 2) {
-      wristOccluderMaterial.colorWrite = true;
-      wristOccluderMaterial.transparent = false;
-      wristOccluderMaterial.opacity = 1;
-      wristOccluderMaterial.depthWrite = true;
-    } else if (mode === 3) {
-      wristOccluderMaterial.colorWrite = false;
-      wristOccluderMaterial.transparent = false;
-      wristOccluderMaterial.opacity = 1;
-      wristOccluderMaterial.depthWrite = true;
-    }
-
-    wristOccluderMaterial.depthTest = true;
-    wristOccluderMaterial.needsUpdate = true;
-    occluderModeApplied = mode;
-  }
 
   wristLocalQuaternion.copy(wristOccluder.quaternion);
 
@@ -240,10 +247,8 @@ function updateVirtualWristAndWatch() {
     calibrationAxes.quaternion.copy(wristLocalQuaternion);
 
     if (triadMode === 1) {
-      // Misma tríada, dibujada en el centro de la muñeca digital.
       calibrationAxes.position.copy(wristOccluder.position);
     } else if (triadMode === 2) {
-      // Misma tríada, movida al punto de apoyo del reloj.
       calibrationAxes.position.copy(wristSurfacePoint);
     }
   }
@@ -381,7 +386,7 @@ function state(visible) {
     revision: REVISION,
     asset: modelConfig.asset || DEFAULT_MODEL_CONFIG.asset,
     contact: contactStatus,
-    units: DIRECT_P0_TEST_MODE ? "GLB m → mm · P0 directo" : "GLB m → escena mm → muñeca virtual",
+    units: DIRECT_P0_TEST_MODE ? "AR-02 · P0 + muñeca virtual" : "GLB m → escena mm → muñeca virtual",
     error: initializationError || modelError
   };
 }
