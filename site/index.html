@@ -13,6 +13,10 @@
     <link rel="icon" href="icon.svg" type="image/svg+xml">
     <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
     <link rel="stylesheet" href="styles.css?v=11.2">
+    <style>
+      /* AR-03 limpio: el tuner completo sigue en código, pero no ocupa interfaz. */
+      #tunerRoot { display: none !important; }
+    </style>
     <script src="camera.js?v=11.2" defer></script>
     <script type="importmap">
       {
@@ -27,7 +31,8 @@
       }
     </script>
     <script src="watch-x-control.js?v=ar03.2" defer></script>
-    <script src="hand-tracking.js?v=ar03.2" type="module"></script>
+    <script src="wrist-mode-control.js?v=ar03.3" type="module"></script>
+    <script src="hand-tracking.js?v=ar03.3" type="module"></script>
   </head>
   <body data-status="idle" data-facing="environment" data-tracking="idle">
     <main class="camera-lab">
@@ -130,16 +135,22 @@
           <span id="fpsValue" class="control-value">DATOS</span>
         </button>
 
-        <!-- ACTIVO: permite limpiar/mostrar landmarks y tríada durante las pruebas. -->
+        <!-- ACTIVO: landmarks y tríada durante las pruebas. -->
         <button id="guidesButton" class="control-button primary-control" type="button" aria-pressed="true">
           <span class="control-label">GUÍAS</span>
           <span id="guidesValue" class="control-value">OCULTAR</span>
         </button>
 
-        <!-- ACTIVO: muestra/oculta el segmento detectado del borde del antebrazo. -->
+        <!-- ACTIVO: segmento detectado del borde del antebrazo. -->
         <button id="forearmEdgeButton" class="control-button primary-control" type="button" aria-pressed="true">
           <span class="control-label">BORDE</span>
           <span id="forearmEdgeValue" class="control-value">OCULTAR</span>
+        </button>
+
+        <!-- ACTIVO: modo visual/de profundidad de la muñeca virtual. -->
+        <button id="wristModeButton" class="control-button primary-control" type="button" aria-pressed="true">
+          <span class="control-label">MUÑECA</span>
+          <span id="wristModeValue" class="control-value">TRANSPARENTE</span>
         </button>
 
         <!-- ACTIVO: compara P0 puro con colocación estética -24 mm del reloj. -->
@@ -148,7 +159,7 @@
           <span id="watchXValue" class="control-value">−24 mm</span>
         </button>
 
-        <!-- OCULTOS EN AR-03: la prueba actual solo usa cámara trasera y no necesita parar sesión. -->
+        <!-- OCULTOS EN AR-03: conservados para reactivarlos si vuelven a hacer falta. -->
         <button id="switchCameraButton" class="control-button primary-control" type="button" hidden style="display:none !important">
           <span class="control-label">CÁMARA</span>
           <span id="switchCameraValue" class="control-value">FRONTAL</span>
