@@ -8,14 +8,17 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="AMURA AR">
     <meta name="mobile-web-app-capable" content="yes">
-    <title>Amura AR · AR-04B · PROFUNDIDAD ESTABLE</title>
+    <title>Amura AR · AR-04 · PRUEBA P0 + Z</title>
     <link rel="manifest" href="manifest.webmanifest?v=11.2">
     <link rel="icon" href="icon.svg" type="image/svg+xml">
     <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
     <link rel="stylesheet" href="styles.css?v=11.2">
     <style>
-      /* AR-04B limpio: el tuner completo sigue en código, pero no ocupa interfaz. */
+      /* Prueba temporal AR-04: conserva todo el código pero deja una lectura limpia P0 + Z. */
       #tunerRoot { display: none !important; }
+      #trackingCanvas,
+      #forearmEdgeCanvas,
+      #metricDepthHud { display: none !important; }
       #ar04Marker {
         position: absolute;
         top: calc(env(safe-area-inset-top, 0px) + 8px);
@@ -23,27 +26,12 @@
         z-index: 99999;
         padding: 7px 10px;
         border-radius: 9px;
-        background: #ffd54f;
-        color: #111;
+        background: #5aa9ff;
+        color: #07111f;
         font: 800 11px/1.2 Arial, sans-serif;
         letter-spacing: .04em;
         pointer-events: none;
         box-shadow: 0 2px 10px rgba(0,0,0,.35);
-      }
-      #metricDepthHud {
-        position: absolute !important;
-        top: calc(env(safe-area-inset-top, 0px) + 50px) !important;
-        left: 10px !important;
-        z-index: 99999 !important;
-        min-width: 230px !important;
-        max-width: 290px !important;
-        padding: 10px 11px !important;
-        border: 1px solid rgba(255,255,255,.38) !important;
-        background: rgba(0,0,0,.88) !important;
-        color: #fff !important;
-        font-size: 12px !important;
-        line-height: 1.35 !important;
-        box-shadow: 0 3px 14px rgba(0,0,0,.45) !important;
       }
     </style>
     <script src="camera.js?v=11.2" defer></script>
@@ -61,11 +49,12 @@
     </script>
     <script src="watch-x-control.js?v=ar03.4" type="module"></script>
     <script src="wrist-mode-control.js?v=ar03.4" type="module"></script>
-    <script src="hand-tracking.js?v=ar04b.1" type="module"></script>
+    <script src="hand-tracking.js?v=ar04z.1" type="module"></script>
+    <script src="z-axis-test.js?v=ar04z.1" type="module"></script>
   </head>
   <body data-status="idle" data-facing="environment" data-tracking="idle">
     <main class="camera-lab">
-      <div id="ar04Marker">AR-04B · PROFUNDIDAD ESTABLE</div>
+      <div id="ar04Marker">AR-04 · PRUEBA P0 + Z</div>
       <video
         id="cameraVideo"
         class="camera-video"
@@ -89,7 +78,7 @@
       <header class="topbar" style="display:none !important">
         <div>
           <p class="brand">AMURA</p>
-          <p class="phase">AR-04B · PROFUNDIDAD ESTABLE</p>
+          <p class="phase">AR-04 · PRUEBA P0 + Z</p>
         </div>
         <div class="status-pill" role="status" aria-live="polite">
           <span class="status-dot" aria-hidden="true"></span>
@@ -109,10 +98,10 @@
       </div>
 
       <section id="startPanel" class="start-card" aria-labelledby="cameraTitle">
-        <p class="eyebrow">PRIMER OBJETO 3D</p>
-        <h1 id="cameraTitle">A1 · AR-04B · PROFUNDIDAD ESTABLE</h1>
+        <p class="eyebrow">PRUEBA DE GEOMETRÍA</p>
+        <h1 id="cameraTitle">AR-04 · P0 + EJE Z</h1>
         <p id="statusMessage" class="lead">
-          La distancia sólo cambia cuando varias medidas coinciden; si el giro las dispersa, se conserva la última profundidad fiable.
+          Sin reloj: observa si Z sigue la normal de la muñeca durante el giro 0°→180°.
         </p>
         <p class="privacy">
           El análisis ocurre en este dispositivo. Este laboratorio no almacena imágenes.
@@ -153,7 +142,7 @@
         </button>
       </div>
 
-      <nav class="controls" aria-label="Controles AR-04B">
+      <nav class="controls" aria-label="Controles AR-04">
         <button id="diagnosticsButton" class="control-button" type="button" aria-pressed="false" style="display:none !important">
           <span class="control-label">DIAG</span>
           <span id="fpsValue" class="control-value">DATOS</span>
