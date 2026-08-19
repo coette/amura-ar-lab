@@ -10,18 +10,29 @@ const STORAGE_KEY = "amura.tuning.v112";
 
 export const tuning = {
   // POSICIÓN
-  offsetMm: 6,          // desplazamiento desde el landmark 0 hacia el codo
-  lateralMm: -2,        // corrección transversal fina
+  offsetMm: 6,
+  lateralMm: -2,
   // GIRO
-  dialDegrees: 0,       // el GLB ya trae su tríada; solo ajuste fino
-  flexionFix: 1,         // 0 = como estaba, 1 = corrige el falso giro al doblar
-  liftMm: 2,            // pequeña holgura de diagnóstico sobre el contacto
+  dialDegrees: 0,
+  flexionFix: 1,
+  liftMm: 2,
   // CÁMARA
-  fovDiagonal: 73,      // aproximación estable al rotar el dispositivo
+  fovDiagonal: 73,
   // FILTRO
-  smoothing: 1,          // 0 = crudo (como v9.2), 1 = estabilizador conectado
+  smoothing: 1,
   orientationCutoff: 0.55,
-  orientationBeta: 1.8
+  orientationBeta: 1.8,
+  // MUÑECA / OCCLUDER PROCEDURAL
+  occluderMode: 1,      // 0 OFF · 1 VISIBLE · 2 OCCLUDER
+  occluderWidthMm: 62,
+  occluderThicknessMm: 44,
+  occluderLengthMm: 150,
+  occluderXmm: 0,
+  occluderYmm: 0,
+  occluderZmm: -20,
+  occluderRotX: 0,
+  occluderRotY: 0,
+  occluderRotZ: 0
 };
 
 const GROUPS = [
@@ -36,6 +47,20 @@ const GROUPS = [
     id: "rot", label: "GIRO", fields: [
       { key: "dialDegrees", label: "Dónde caen las 12", min: -180, max: 180, step: 5, unit: "°" },
       { key: "flexionFix", label: "Corregir falso giro", min: 0, max: 1, step: 1, unit: "", toggle: ["NO", "SÍ"] }
+    ]
+  },
+  {
+    id: "wrist", label: "MUÑECA", fields: [
+      { key: "occluderMode", label: "Modo", min: 0, max: 2, step: 1, unit: "", options: ["OFF", "VISIBLE", "OCCLUDER"] },
+      { key: "occluderWidthMm", label: "Ancho", min: 30, max: 100, step: 1, unit: " mm" },
+      { key: "occluderThicknessMm", label: "Grosor", min: 20, max: 80, step: 1, unit: " mm" },
+      { key: "occluderLengthMm", label: "Largo", min: 70, max: 240, step: 2, unit: " mm" },
+      { key: "occluderXmm", label: "Mover X", min: -50, max: 50, step: 1, unit: " mm" },
+      { key: "occluderYmm", label: "Mover Y", min: -80, max: 80, step: 1, unit: " mm" },
+      { key: "occluderZmm", label: "Mover Z", min: -60, max: 30, step: 1, unit: " mm" },
+      { key: "occluderRotX", label: "Giro X", min: -90, max: 90, step: 1, unit: "°" },
+      { key: "occluderRotY", label: "Giro Y", min: -90, max: 90, step: 1, unit: "°" },
+      { key: "occluderRotZ", label: "Giro Z", min: -90, max: 90, step: 1, unit: "°" }
     ]
   },
   {
@@ -71,6 +96,7 @@ function save() {
 
 function displayValue(field) {
   const value = tuning[field.key];
+  if (field.options) return field.options[Math.max(0, Math.min(field.options.length - 1, Math.round(value)))] || "";
   if (field.toggle) return field.toggle[value ? 1 : 0];
   const decimals = field.step < 1 ? 2 : 0;
   return value.toFixed(decimals) + field.unit;
