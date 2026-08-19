@@ -173,12 +173,11 @@ function updateVirtualWristAndWatch() {
 
   // AR-02 · MUÑECA
   // El rig sigue siendo exactamente el de AR-01: origen=P0 y misma tríada.
-  // La cápsula NO tiene pose independiente. Su centro baja medio grosor en -Z,
-  // de modo que su punto más alto (+Z) toca exactamente el origen de la tríada,
-  // que es también AMURA_CASEBACK_CONTACT.
+  // La cápsula NO tiene pose independiente. Su centro se coloca medio grosor
+  // al lado del cierre, manteniendo una de sus superficies exactamente en P0.
   if (DIRECT_P0_TEST_MODE) {
     wristOccluder.scale.set(width / 2, length / 4, thickness / 2);
-    wristOccluder.position.set(0, 0, -thickness / 2);
+    wristOccluder.position.set(0, 0, thickness / 2);
     wristOccluder.rotation.set(0, 0, Math.PI / 2);
 
     // El reloj conserva íntegra la referencia estable AR-01.
