@@ -24,6 +24,7 @@ import { tuning } from "./tuner.js?v=11.2";
 const MODEL_URL = "./models/A1-Irontide-AR-pretty-mobile.glb";
 const MODEL_CONFIG_URL = "./models/A1-Irontide-AR-pretty-mobile.json";
 const MODEL_Z_OFFSET_RADIANS = 0;
+const MODEL_X_OFFSET_RADIANS = Math.PI;
 const DEG_TO_RAD = Math.PI / 180;
 const DIRECT_P0_TEST_MODE = true;
 
@@ -269,9 +270,11 @@ function loadWatch() {
 
     watchModel.scale.setScalar(Number(config.scaleToMillimeters) || 1000);
 
-    // El GLB ya está exportado en la tríada AMURA; en esta prueba no se añade
-    // ninguna corrección heredada de 90° alrededor de Z.
+    // El GLB ya no necesita el antiguo +90° en Z. La única corrección de esta
+    // prueba es 180° alrededor de X (eje longitudinal 9→3) para que +Z quede
+    // físicamente en el sentido palma→dorso sin mover P0 ni alterar la escala.
     watchModel.rotateZ(MODEL_Z_OFFSET_RADIANS);
+    watchModel.rotateX(MODEL_X_OFFSET_RADIANS);
 
     const rootNode = watchModel.getObjectByName(config.rootNode);
     const contactNode = watchModel.getObjectByName(config.contactNode);
