@@ -19,7 +19,7 @@ import { tuning } from "./tuner.js?v=11.2";
 
 const MODEL_URL = "./models/A1-Irontide-AR-pretty-mobile.glb";
 const MODEL_CONFIG_URL = "./models/A1-Irontide-AR-pretty-mobile.json";
-const MODEL_Z_OFFSET_RADIANS = -Math.PI / 2;
+const MODEL_Z_OFFSET_RADIANS = Math.PI / 2;
 const DEFAULT_MODEL_CONFIG = {
   asset: "A1-Irontide-AR-pretty-mobile.glb",
   scaleToMillimeters: 1000,
@@ -101,15 +101,15 @@ function loadWatch() {
     // El GLB conserva metros estándar; este nodo lo convierte una sola vez a mm.
     watchModel.scale.setScalar(Number(config.scaleToMillimeters) || 1000);
 
-    // Corrección fija del asset: 90° antihorarios alrededor del Z local,
+    // Corrección fija del asset: 90° en el sentido opuesto al ajuste anterior alrededor del Z local,
     // que es el eje normal a la esfera. El tracking y el rig no se modifican.
     watchModel.rotateZ(MODEL_Z_OFFSET_RADIANS);
 
     const rootNode = watchModel.getObjectByName(config.rootNode);
     const contactNode = watchModel.getObjectByName(config.contactNode);
     contactStatus = rootNode && contactNode
-      ? "raíz + fondo encontrados · Z -90°"
-      : "fallback al origen del GLB · Z -90°";
+      ? "raíz + fondo encontrados · Z +90°"
+      : "fallback al origen del GLB · Z +90°";
 
     wristRig = new Group();
     wristRig.name = "AMURA_WRIST_RIG_MILLIMETERS";
