@@ -15,10 +15,16 @@ function syncWatchXButton() {
   if (button) {
     button.setAttribute("aria-pressed", fitted ? "true" : "false");
     button.classList.toggle("primary-control", fitted);
+    button.setAttribute(
+      "aria-label",
+      fitted ? "Volver reloj a X cero" : "Mover reloj menos 24 milímetros en X"
+    );
   }
 
+  // El texto indica la ACCIÓN del siguiente toque, no la posición actual.
+  // Así, en cero se ve claramente el botón «−24 mm» que queremos probar.
   if (value) {
-    value.textContent = fitted ? "−24 mm" : "0 mm";
+    value.textContent = fitted ? "0 mm" : "−24 mm";
   }
 
   if (window.AmuraTrackingDiagnostics) {
