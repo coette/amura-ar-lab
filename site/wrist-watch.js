@@ -23,7 +23,7 @@ import { tuning } from "./tuner.js?v=11.2";
 
 const MODEL_URL = "./models/A1-Irontide-AR-pretty-mobile.glb";
 const MODEL_CONFIG_URL = "./models/A1-Irontide-AR-pretty-mobile.json";
-const MODEL_Z_OFFSET_RADIANS = Math.PI / 2;
+const MODEL_Z_OFFSET_RADIANS = 0;
 const DEG_TO_RAD = Math.PI / 180;
 const DIRECT_P0_TEST_MODE = true;
 
@@ -269,7 +269,8 @@ function loadWatch() {
 
     watchModel.scale.setScalar(Number(config.scaleToMillimeters) || 1000);
 
-    // Corrección fija del asset. No altera la convención XYZ del rig.
+    // El GLB ya está exportado en la tríada AMURA; en esta prueba no se añade
+    // ninguna corrección heredada de 90° alrededor de Z.
     watchModel.rotateZ(MODEL_Z_OFFSET_RADIANS);
 
     const rootNode = watchModel.getObjectByName(config.rootNode);
