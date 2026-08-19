@@ -25,6 +25,7 @@ const MODEL_URL = "./models/A1-Irontide-AR-pretty-mobile.glb";
 const MODEL_CONFIG_URL = "./models/A1-Irontide-AR-pretty-mobile.json";
 const MODEL_Z_OFFSET_RADIANS = Math.PI / 2;
 const DEG_TO_RAD = Math.PI / 180;
+const DIRECT_P0_TEST_MODE = true;
 
 const DEFAULT_MODEL_CONFIG = {
   asset: "A1-Irontide-AR-pretty-mobile.glb",
@@ -133,6 +134,32 @@ function createWristOccluder() {
 
 function updateVirtualWristAndWatch() {
   if (!wristOccluder || !wristOccluderMaterial) return;
+
+  // V11.3 P0 DIRECTO: el origen del rig ES el centro del fondo.
+  // La muñeca virtual y todos sus offsets quedan fuera de esta prueba para no
+  // contaminar posición, orientación ni escala.
+  if (DIRECT_P0_TEST_MODE) {
+    wristOccluder.visible = false;
+    wristOccluder.position.set(0, 0, 0);
+    wristOccluder.rotation.set(0, 0, 0);
+
+    if (watchAnchor && watchModel) {
+      watchAnchor.quaternion.identity();
+      watchAnchor.position.copy(contactOffsetInAnchor).multiplyScalar(-1);
+      watchModel.visible = Boolean(Number(tuning.watchVisible));
+    }
+
+    if (calibrationAxes) {
+      const triadMode = Math.max(
+        0,
+        Math.min(2, Math.round(Number(tuning.triadMode) || 0))
+      );
+      calibrationAxes.visible = triadMode !== 0;
+      calibrationAxes.position.set(0, 0, 0);
+      calibrationAxes.quaternion.identity();
+    }
+    return;
+  }
 
   const width = Math.max(1, Number(tuning.occluderWidthMm) || 62);
   const thickness = Math.max(1, Number(tuning.occluderThicknessMm) || 44);
@@ -271,7 +298,7 @@ function loadWatch() {
     }
 
     contactStatus = rootNode && contactNode
-      ? "fondo → superficie muñeca · automático"
+      ? (DIRECT_P0_TEST_MODE ? "AMURA_CASEBACK_CONTACT = P0" : "fondo → superficie muñeca · automático")
       : "fallback al origen del GLB · automático";
 
     updateVirtualWristAndWatch();
@@ -350,7 +377,7 @@ function state(visible) {
     revision: REVISION,
     asset: modelConfig.asset || DEFAULT_MODEL_CONFIG.asset,
     contact: contactStatus,
-    units: "GLB m → escena mm → muñeca virtual",
+    units: DIRECT_P0_TEST_MODE ? "GLB m → mm · P0 directo" : "GLB m → escena mm → muñeca virtual",
     error: initializationError || modelError
   };
 }
@@ -391,16 +418,26 @@ export function updateWristWatch(options) {
     orientationQuaternion.premultiply(dialQuaternion);
     wristRig.quaternion.copy(orientationQuaternion);
 
-    const backMm = Number(tuning.offsetMm) || 0;
-    const sideMm = Number(tuning.lateralMm) || 0;
-    const upMm = Number(tuning.liftMm) || 0;
-    const arm = pose.armAxis || pose.yAxis;
+    if (DIRECT_P0_TEST_MODE) {
+      // P0 manda la posición completa del origen. Ningún offset de muñeca,
+      // fondo o calibración puede separarlo del landmark dorado.
+      wristRig.position.set(
+        pose.positionMm.x,
+        pose.positionMm.y,
+        pose.positionMm.z
+      );
+    } else {
+      const backMm = Number(tuning.offsetMm) || 0;
+      const sideMm = Number(tuning.lateralMm) || 0;
+      const upMm = Number(tuning.liftMm) || 0;
+      const arm = pose.armAxis || pose.yAxis;
 
-    wristRig.position.set(
-      pose.positionMm.x - arm.x * backMm + axisX.x * sideMm + axisZ.x * upMm,
-      pose.positionMm.y - arm.y * backMm + axisX.y * sideMm + axisZ.y * upMm,
-      pose.positionMm.z - arm.z * backMm + axisX.z * sideMm + axisZ.z * upMm
-    );
+      wristRig.position.set(
+        pose.positionMm.x - arm.x * backMm + axisX.x * sideMm + axisZ.x * upMm,
+        pose.positionMm.y - arm.y * backMm + axisX.y * sideMm + axisZ.y * upMm,
+        pose.positionMm.z - arm.z * backMm + axisX.z * sideMm + axisZ.z * upMm
+      );
+    }
 
     lastDepthMm = pose.depthMm;
     lastPalmWidthMm = pose.palmWidthMm;
