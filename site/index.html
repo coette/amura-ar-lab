@@ -8,13 +8,13 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="AMURA AR">
     <meta name="mobile-web-app-capable" content="yes">
-    <title>Amura AR · AR-04A · DIAGNÓSTICO MÉTRICO</title>
+    <title>Amura AR · AR-04B · PROFUNDIDAD ESTABLE</title>
     <link rel="manifest" href="manifest.webmanifest?v=11.2">
     <link rel="icon" href="icon.svg" type="image/svg+xml">
     <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
     <link rel="stylesheet" href="styles.css?v=11.2">
     <style>
-      /* AR-04A limpio: el tuner completo sigue en código, pero no ocupa interfaz. */
+      /* AR-04B limpio: el tuner completo sigue en código, pero no ocupa interfaz. */
       #tunerRoot { display: none !important; }
       #ar04Marker {
         position: absolute;
@@ -55,17 +55,17 @@
           "./wrist-stabilizer.js?v=11.2": "./wrist-stabilizer.js?v=11.3.0",
           "./tuner.js?v=11.2": "./tuner.js?v=11.3.0",
           "./wrist-frame.js?v=11.2": "./wrist-frame.js?v=11.3.0",
-          "./wrist-pose.js?v=11.2": "./wrist-pose-ar04a.js?v=ar04a.2"
+          "./wrist-pose.js?v=11.2": "./wrist-pose-ar04b.js?v=ar04b.1"
         }
       }
     </script>
     <script src="watch-x-control.js?v=ar03.4" type="module"></script>
     <script src="wrist-mode-control.js?v=ar03.4" type="module"></script>
-    <script src="hand-tracking.js?v=ar04a.2" type="module"></script>
+    <script src="hand-tracking.js?v=ar04b.1" type="module"></script>
   </head>
   <body data-status="idle" data-facing="environment" data-tracking="idle">
     <main class="camera-lab">
-      <div id="ar04Marker">AR-04A · DATOS MÉTRICOS</div>
+      <div id="ar04Marker">AR-04B · PROFUNDIDAD ESTABLE</div>
       <video
         id="cameraVideo"
         class="camera-video"
@@ -89,7 +89,7 @@
       <header class="topbar" style="display:none !important">
         <div>
           <p class="brand">AMURA</p>
-          <p class="phase">AR-04A · DIAGNÓSTICO MÉTRICO</p>
+          <p class="phase">AR-04B · PROFUNDIDAD ESTABLE</p>
         </div>
         <div class="status-pill" role="status" aria-live="polite">
           <span class="status-dot" aria-hidden="true"></span>
@@ -110,9 +110,9 @@
 
       <section id="startPanel" class="start-card" aria-labelledby="cameraTitle">
         <p class="eyebrow">PRIMER OBJETO 3D</p>
-        <h1 id="cameraTitle">A1 · AR-04A · DIAGNÓSTICO MÉTRICO</h1>
+        <h1 id="cameraTitle">A1 · AR-04B · PROFUNDIDAD ESTABLE</h1>
         <p id="statusMessage" class="lead">
-          Mide qué segmentos alteran falsamente la profundidad al girar la muñeca. El comportamiento aún es el de AR-03.
+          La distancia sólo cambia cuando varias medidas coinciden; si el giro las dispersa, se conserva la última profundidad fiable.
         </p>
         <p class="privacy">
           El análisis ocurre en este dispositivo. Este laboratorio no almacena imágenes.
@@ -153,7 +153,7 @@
         </button>
       </div>
 
-      <nav class="controls" aria-label="Controles AR-04A">
+      <nav class="controls" aria-label="Controles AR-04B">
         <button id="diagnosticsButton" class="control-button" type="button" aria-pressed="false" style="display:none !important">
           <span class="control-label">DIAG</span>
           <span id="fpsValue" class="control-value">DATOS</span>
