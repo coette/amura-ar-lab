@@ -40,12 +40,18 @@ const dialQuaternion = new Quaternion();
 const axisX = new Vector3();
 const axisY = new Vector3();
 const axisZ = new Vector3();
+const wristSurfaceOffset = new Vector3();
+const rotatedContactOffset = new Vector3();
+const contactWorldPosition = new Vector3();
+const wristLocalQuaternion = new Quaternion();
 
 let renderer = null;
 let wristRig = null;
+let watchAnchor = null;
 let watchModel = null;
 let wristOccluder = null;
 let wristOccluderMaterial = null;
+let contactOffsetInAnchor = new Vector3();
 let occluderModeApplied = -1;
 let modelStatus = "en espera";
 let modelError = "";
@@ -109,21 +115,16 @@ function createWristOccluder() {
   return wristOccluder;
 }
 
-function updateWristOccluder() {
+function updateVirtualWristAndWatch() {
   if (!wristOccluder || !wristOccluderMaterial) return;
-
-  const mode = Math.max(0, Math.min(3, Math.round(Number(tuning.occluderMode) || 0)));
-  if (mode === 0) {
-    wristOccluder.visible = false;
-    occluderModeApplied = 0;
-    return;
-  }
 
   const width = Math.max(1, Number(tuning.occluderWidthMm) || 62);
   const thickness = Math.max(1, Number(tuning.occluderThicknessMm) || 44);
   const length = Math.max(1, Number(tuning.occluderLengthMm) || 150);
+  const mode = Math.max(0, Math.min(3, Math.round(Number(tuning.occluderMode) || 0)));
 
-  wristOccluder.visible = true;
+  // La muñeca virtual siempre existe geométricamente aunque esté en OFF.
+  // Esto permite que el reloj siga apoyado correctamente aunque no la dibujemos.
   wristOccluder.scale.set(width / 2, length / 4, thickness / 2);
   wristOccluder.position.set(
     Number(tuning.occluderXmm) || 0,
@@ -136,6 +137,7 @@ function updateWristOccluder() {
     (Number(tuning.occluderRotZ) || 0) * DEG_TO_RAD
   );
 
+  wristOccluder.visible = mode !== 0;
   if (mode !== occluderModeApplied) {
     if (mode === 1) {
       // TRANSPARENTE: sirve para colocar la cápsula sin tapar el reloj.
@@ -149,9 +151,8 @@ function updateWristOccluder() {
       wristOccluderMaterial.transparent = false;
       wristOccluderMaterial.opacity = 1;
       wristOccluderMaterial.depthWrite = true;
-    } else {
-      // OCLUSIÓN: no dibuja color, pero sí profundidad. La cámara sigue mostrando
-      // el brazo real mientras esta cápsula oculta las partes 3D del reloj detrás.
+    } else if (mode === 3) {
+      // OCLUSIÓN: no dibuja color, pero sí profundidad.
       wristOccluderMaterial.colorWrite = false;
       wristOccluderMaterial.transparent = false;
       wristOccluderMaterial.opacity = 1;
@@ -161,6 +162,29 @@ function updateWristOccluder() {
     wristOccluderMaterial.needsUpdate = true;
     occluderModeApplied = mode;
   }
+
+  if (!watchAnchor || !watchModel) return;
+
+  // El reloj hereda exactamente la orientación local de la muñeca virtual.
+  wristLocalQuaternion.copy(wristOccluder.quaternion);
+  watchAnchor.quaternion.copy(wristLocalQuaternion);
+
+  // Punto de apoyo de la cápsula: centro + semigrosor en su Z local.
+  wristSurfaceOffset
+    .set(0, 0, thickness / 2)
+    .applyQuaternion(wristLocalQuaternion);
+
+  // AMURA_CASEBACK_CONTACT debe coincidir con ese punto de apoyo.
+  rotatedContactOffset
+    .copy(contactOffsetInAnchor)
+    .applyQuaternion(wristLocalQuaternion);
+
+  watchAnchor.position
+    .copy(wristOccluder.position)
+    .add(wristSurfaceOffset)
+    .sub(rotatedContactOffset);
+
+  watchModel.visible = Boolean(Number(tuning.watchVisible));
 }
 
 function loadWatch() {
@@ -189,17 +213,33 @@ function loadWatch() {
 
     const rootNode = watchModel.getObjectByName(config.rootNode);
     const contactNode = watchModel.getObjectByName(config.contactNode);
-    contactStatus = rootNode && contactNode
-      ? "raíz + fondo encontrados · Z +90°"
-      : "fallback al origen del GLB · Z +90°";
 
     wristRig = new Group();
     wristRig.name = "AMURA_WRIST_RIG_MILLIMETERS";
     wristRig.visible = false;
-    wristRig.add(watchModel);
+
+    watchAnchor = new Group();
+    watchAnchor.name = "AMURA_WATCH_ON_WRIST_ANCHOR";
+    watchAnchor.add(watchModel);
+    wristRig.add(watchAnchor);
     scene.add(wristRig);
     createWristOccluder();
 
+    // Medimos una sola vez dónde queda el punto real del fondo respecto al anclaje.
+    // Después lo hacemos coincidir con la superficie de la cápsula en cada frame.
+    wristRig.updateMatrixWorld(true);
+    if (contactNode) {
+      contactNode.getWorldPosition(contactWorldPosition);
+      contactOffsetInAnchor = watchAnchor.worldToLocal(contactWorldPosition.clone());
+    } else {
+      contactOffsetInAnchor.set(0, 0, 0);
+    }
+
+    contactStatus = rootNode && contactNode
+      ? "fondo → superficie muñeca · automático"
+      : "fallback al origen del GLB · automático";
+
+    updateVirtualWristAndWatch();
     modelStatus = "listo";
     dracoLoader.dispose();
     return watchModel;
@@ -271,7 +311,7 @@ function state(visible) {
     revision: REVISION,
     asset: modelConfig.asset || DEFAULT_MODEL_CONFIG.asset,
     contact: contactStatus,
-    units: "GLB m → escena mm → perspectiva aproximada",
+    units: "GLB m → escena mm → muñeca virtual",
     error: initializationError || modelError
   };
 }
@@ -307,8 +347,8 @@ export function updateWristWatch(options) {
   orientationQuaternion.premultiply(dialQuaternion);
   wristRig.quaternion.copy(orientationQuaternion);
 
-  // Todo en milímetros. El offset hacia el codo usa un eje anatómico separado
-  // del marco del reloj, de modo que cambiar de mano no invierte la posición.
+  // Todo en milímetros. Estos offsets desplazan la muñeca virtual completa;
+  // el reloj ya no tiene un offset independiente: queda apoyado sobre ella.
   const backMm = Number(tuning.offsetMm) || 0;
   const sideMm = Number(tuning.lateralMm) || 0;
   const upMm = Number(tuning.liftMm) || 0;
@@ -320,10 +360,9 @@ export function updateWristWatch(options) {
     pose.positionMm.z - arm.z * backMm + axisX.z * sideMm + axisZ.z * upMm
   );
 
-  // El GLB ya está en metros; x1000 lo deja en mm, que es la unidad de escena.
   wristRig.scale.setScalar(1);
   wristRig.visible = true;
-  updateWristOccluder();
+  updateVirtualWristAndWatch();
   lastDepthMm = pose.depthMm;
   lastPalmWidthMm = pose.palmWidthMm;
   lastReprojectionErrorPx = pose.reprojectionErrorPx;
@@ -334,7 +373,7 @@ export function updateWristWatch(options) {
 
 export function holdWristWatch() {
   if (!renderer) return state(false);
-  updateWristOccluder();
+  updateVirtualWristAndWatch();
   renderer.render(scene, camera);
   return state(Boolean(wristRig && wristRig.visible));
 }
