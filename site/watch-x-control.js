@@ -1,46 +1,64 @@
-// AR-03 · control temporal de colocación X del reloj.
-// P0, la tríada y la muñeca virtual no se mueven: solo watchAnchor.
+import { tuning } from "./tuner.js?v=11.2";
+
+// AR-03 · un único control para comparar colocación y ocultar el reloj.
+// P0, tríada y muñeca virtual no se mueven nunca.
+const STORAGE_KEY = "amura.tuning.v112";
 const ZERO_X_MM = 0;
 const FIT_X_MM = -24;
+const STATES = [
+  { x: ZERO_X_MM, visible: 1, label: "0 mm" },
+  { x: FIT_X_MM, visible: 1, label: "−24 mm" },
+  { x: FIT_X_MM, visible: 0, label: "OCULTO" }
+];
 
+let stateIndex = 0;
 window.AmuraWatchPlacementXmm = ZERO_X_MM;
 
 const button = document.getElementById("watchXButton");
 const value = document.getElementById("watchXValue");
 
-function syncWatchXButton() {
-  const current = Number(window.AmuraWatchPlacementXmm) || 0;
-  const fitted = current === FIT_X_MM;
+function persistWatchVisible() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+    saved.watchVisible = Number(tuning.watchVisible) ? 1 : 0;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
+  } catch (error) {
+    /* modo privado */
+  }
+}
 
+function applyState() {
+  const state = STATES[stateIndex];
+  window.AmuraWatchPlacementXmm = state.x;
+  tuning.watchVisible = state.visible;
+  persistWatchVisible();
+
+  if (value) value.textContent = state.label;
   if (button) {
-    button.setAttribute("aria-pressed", fitted ? "true" : "false");
-    button.classList.toggle("primary-control", fitted);
+    button.setAttribute("aria-pressed", stateIndex === 0 ? "false" : "true");
+    button.classList.toggle("primary-control", stateIndex !== 0);
     button.setAttribute(
       "aria-label",
-      fitted ? "Volver reloj a X cero" : "Mover reloj menos 24 milímetros en X"
+      state.visible
+        ? "Reloj visible en X " + state.label
+        : "Reloj oculto"
     );
   }
 
-  // El texto indica la ACCIÓN del siguiente toque, no la posición actual.
-  // Así, en cero se ve claramente el botón «−24 mm» que queremos probar.
-  if (value) {
-    value.textContent = fitted ? "0 mm" : "−24 mm";
-  }
-
   if (window.AmuraTrackingDiagnostics) {
-    window.AmuraTrackingDiagnostics["Posición X reloj"] =
-      (current > 0 ? "+" : "") + current + " mm";
+    window.AmuraTrackingDiagnostics["Posición X reloj"] = state.visible
+      ? state.x + " mm"
+      : "oculto";
   }
 }
+
+// Cada carga empieza limpia: reloj visible en P0/X=0.
+stateIndex = 0;
+applyState();
 
 if (button) {
   button.addEventListener("click", () => {
-    window.AmuraWatchPlacementXmm =
-      (Number(window.AmuraWatchPlacementXmm) || 0) === FIT_X_MM
-        ? ZERO_X_MM
-        : FIT_X_MM;
-    syncWatchXButton();
+    stateIndex = (stateIndex + 1) % STATES.length;
+    applyState();
   });
 }
-
-syncWatchXButton();
