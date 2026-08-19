@@ -30,8 +30,8 @@
         }
       }
     </script>
-    <script src="watch-x-control.js?v=ar03.2" defer></script>
-    <script src="wrist-mode-control.js?v=ar03.3" type="module"></script>
+    <script src="watch-x-control.js?v=ar03.4" type="module"></script>
+    <script src="wrist-mode-control.js?v=ar03.4" type="module"></script>
     <script src="hand-tracking.js?v=ar03.3" type="module"></script>
   </head>
   <body data-status="idle" data-facing="environment" data-tracking="idle">
@@ -153,10 +153,10 @@
           <span id="wristModeValue" class="control-value">TRANSPARENTE</span>
         </button>
 
-        <!-- ACTIVO: compara P0 puro con colocación estética -24 mm del reloj. -->
-        <button id="watchXButton" class="control-button" type="button" aria-pressed="false" aria-label="Mover reloj menos 24 milímetros en X">
+        <!-- ACTIVO: ciclo reloj visible 0 mm → visible -24 mm → oculto. -->
+        <button id="watchXButton" class="control-button" type="button" aria-pressed="false" aria-label="Reloj visible en X cero">
           <span class="control-label">X RELOJ</span>
-          <span id="watchXValue" class="control-value">−24 mm</span>
+          <span id="watchXValue" class="control-value">0 mm</span>
         </button>
 
         <!-- OCULTOS EN AR-03: conservados para reactivarlos si vuelven a hacer falta. -->
