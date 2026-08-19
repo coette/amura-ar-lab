@@ -8,7 +8,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="AMURA AR">
     <meta name="mobile-web-app-capable" content="yes">
-    <title>Amura AR · Punto 5 Pose métrica V11.2</title>
+    <title>Amura AR · P0 directo · Orientación/Escala V11.3</title>
     <link rel="manifest" href="manifest.webmanifest?v=11.2">
     <link rel="icon" href="icon.svg" type="image/svg+xml">
     <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
@@ -17,13 +17,15 @@
     <script type="importmap">
       {
         "imports": {
-          "./wrist-watch.js?v=11.2": "./wrist-watch.js?v=11.2.9",
-          "./wrist-stabilizer.js?v=11.2": "./wrist-stabilizer.js?v=11.2.9",
-          "./tuner.js?v=11.2": "./tuner.js?v=11.2.9"
+          "./wrist-watch.js?v=11.2": "./wrist-watch.js?v=11.3.0",
+          "./wrist-stabilizer.js?v=11.2": "./wrist-stabilizer.js?v=11.3.0",
+          "./tuner.js?v=11.2": "./tuner.js?v=11.3.0",
+          "./wrist-frame.js?v=11.2": "./wrist-frame.js?v=11.3.0",
+          "./wrist-pose.js?v=11.2": "./wrist-pose.js?v=11.3.0"
         }
       }
     </script>
-    <script src="hand-tracking.js?v=11.2.9" type="module"></script>
+    <script src="hand-tracking.js?v=11.3.0" type="module"></script>
   </head>
   <body data-status="idle" data-facing="environment" data-tracking="idle">
     <main class="camera-lab">
@@ -50,7 +52,7 @@
       <header class="topbar">
         <div>
           <p class="brand">AMURA</p>
-          <p class="phase">FASE 2 · PUNTO 5 · V11.2</p>
+          <p class="phase">FASE 2 · P0 DIRECTO · V11.3</p>
         </div>
         <div class="status-pill" role="status" aria-live="polite">
           <span class="status-dot" aria-hidden="true"></span>
@@ -71,9 +73,9 @@
 
       <section id="startPanel" class="start-card" aria-labelledby="cameraTitle">
         <p class="eyebrow">PRIMER OBJETO 3D</p>
-        <h1 id="cameraTitle">A1 · Pose métrica V11.2</h1>
+        <h1 id="cameraTitle">A1 · P0 directo V11.3</h1>
         <p id="statusMessage" class="lead">
-          Prueba el A1 optimizado con XYZ corregido, perspectiva y escala por distancia.
+          P0 fija el centro del fondo · P0/P5/P17 orientan · escala independiente.
         </p>
         <p class="privacy">
           El análisis ocurre en este dispositivo. Este laboratorio no almacena imágenes.
