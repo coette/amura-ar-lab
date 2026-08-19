@@ -50,7 +50,6 @@ const GROUPS = [
   },
   {
     id: "wrist", label: "MUÑECA", fields: [
-      { key: "occluderMode", label: "Aspecto / función", choices: ["OFF", "TRANSPARENTE", "SÓLIDA", "OCLUSIÓN"] },
       { key: "occluderWidthMm", label: "Ancho", min: 30, max: 100, step: 1, unit: " mm" },
       { key: "occluderThicknessMm", label: "Grosor", min: 20, max: 80, step: 1, unit: " mm" },
       { key: "occluderLengthMm", label: "Largo", min: 70, max: 240, step: 2, unit: " mm" },
@@ -59,7 +58,8 @@ const GROUPS = [
       { key: "occluderZmm", label: "Mover Z", min: -60, max: 30, step: 1, unit: " mm" },
       { key: "occluderRotX", label: "Giro X", min: -90, max: 90, step: 1, unit: "°" },
       { key: "occluderRotY", label: "Giro Y", min: -90, max: 90, step: 1, unit: "°" },
-      { key: "occluderRotZ", label: "Giro Z", min: -90, max: 90, step: 1, unit: "°" }
+      { key: "occluderRotZ", label: "Giro Z", min: -90, max: 90, step: 1, unit: "°" },
+      { key: "occluderMode", label: "Aspecto / función", choices: ["OFF", "TRANSPARENTE", "SÓLIDA", "OCLUSIÓN"] }
     ]
   },
   {
