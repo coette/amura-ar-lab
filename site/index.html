@@ -51,7 +51,8 @@
         aria-hidden="true"
       ></canvas>
 
-      <header class="topbar">
+      <!-- OCULTO EN AR-03: conservado para poder reactivarlo sin perder código. -->
+      <header class="topbar" style="display:none !important">
         <div>
           <p class="brand">AMURA</p>
           <p class="phase">AR-03 · EJE ANTEBRAZO</p>
@@ -62,12 +63,14 @@
         </div>
       </header>
 
+      <!-- Se mantiene: es útil para saber si MediaPipe está detectando o ha perdido la mano. -->
       <div id="trackingHud" class="tracking-hud" role="status" aria-live="polite" hidden>
         <span class="tracking-dot" aria-hidden="true"></span>
         <span id="trackingLabel">MEDIAPIPE EN ESPERA</span>
       </div>
 
-      <div class="axis-legend" aria-label="Convención de ejes del reloj">
+      <!-- OCULTO EN AR-03: la convención de ejes ya está fijada. -->
+      <div class="axis-legend" aria-label="Convención de ejes del reloj" style="display:none !important">
         <span class="axis-chip axis-x">+X <small>9→3</small></span>
         <span class="axis-chip axis-y">+Y <small>6→12</small></span>
         <span class="axis-chip axis-z">+Z <small>ESFERA→CRISTAL</small></span>
@@ -95,7 +98,8 @@
         <p>Esperando permiso de cámara…</p>
       </section>
 
-      <aside id="diagnosticsPanel" class="diagnostics" aria-label="Diagnóstico de cámara" hidden>
+      <!-- OCULTO EN AR-03: diagnóstico completo disponible si vuelve a hacer falta. -->
+      <aside id="diagnosticsPanel" class="diagnostics" aria-label="Diagnóstico de cámara" hidden style="display:none !important">
         <div class="diagnostics-heading">
           <div>
             <p class="eyebrow">DIAGNÓSTICO</p>
@@ -106,7 +110,8 @@
         <dl id="diagnosticsList"></dl>
       </aside>
 
-      <div class="rotation-modes" role="group" aria-label="Método de giro de muñeca">
+      <!-- OCULTO EN AR-03: seguimos usando internamente IMAGE 3D, sin selector visible. -->
+      <div class="rotation-modes" role="group" aria-label="Método de giro de muñeca" style="display:none !important">
         <button class="rotation-mode" type="button" data-rotation-mode="world" aria-pressed="false">
           WORLD
         </button>
@@ -118,33 +123,38 @@
         </button>
       </div>
 
-      <nav class="controls" aria-label="Controles de cámara">
-        <button id="diagnosticsButton" class="control-button" type="button" aria-pressed="false">
+      <nav class="controls" aria-label="Controles AR-03">
+        <!-- OCULTO EN AR-03: conservamos toda la lógica de diagnóstico. -->
+        <button id="diagnosticsButton" class="control-button" type="button" aria-pressed="false" style="display:none !important">
           <span class="control-label">DIAG</span>
           <span id="fpsValue" class="control-value">DATOS</span>
         </button>
 
+        <!-- ACTIVO: permite limpiar/mostrar landmarks y tríada durante las pruebas. -->
         <button id="guidesButton" class="control-button primary-control" type="button" aria-pressed="true">
           <span class="control-label">GUÍAS</span>
           <span id="guidesValue" class="control-value">OCULTAR</span>
         </button>
 
+        <!-- ACTIVO: muestra/oculta el segmento detectado del borde del antebrazo. -->
         <button id="forearmEdgeButton" class="control-button primary-control" type="button" aria-pressed="true">
           <span class="control-label">BORDE</span>
           <span id="forearmEdgeValue" class="control-value">OCULTAR</span>
         </button>
 
+        <!-- ACTIVO: compara P0 puro con colocación estética -24 mm del reloj. -->
         <button id="watchXButton" class="control-button" type="button" aria-pressed="false" aria-label="Mover reloj menos 24 milímetros en X">
           <span class="control-label">X RELOJ</span>
           <span id="watchXValue" class="control-value">−24 mm</span>
         </button>
 
-        <button id="switchCameraButton" class="control-button primary-control" type="button" hidden>
+        <!-- OCULTOS EN AR-03: la prueba actual solo usa cámara trasera y no necesita parar sesión. -->
+        <button id="switchCameraButton" class="control-button primary-control" type="button" hidden style="display:none !important">
           <span class="control-label">CÁMARA</span>
           <span id="switchCameraValue" class="control-value">FRONTAL</span>
         </button>
 
-        <button id="stopButton" class="control-button" type="button" hidden>
+        <button id="stopButton" class="control-button" type="button" hidden style="display:none !important">
           <span class="control-label">SESIÓN</span>
           <span class="control-value">DETENER</span>
         </button>
