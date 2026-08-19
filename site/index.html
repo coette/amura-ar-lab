@@ -14,7 +14,15 @@
     <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
     <link rel="stylesheet" href="styles.css?v=11.2">
     <script src="camera.js?v=11.2" defer></script>
-    <script src="hand-tracking.js?v=11.2" type="module"></script>
+    <script type="importmap">
+      {
+        "imports": {
+          "./wrist-watch.js?v=11.2": "./wrist-watch.js?v=11.2.3",
+          "./tuner.js?v=11.2": "./tuner.js?v=11.2.3"
+        }
+      }
+    </script>
+    <script src="hand-tracking.js?v=11.2.3" type="module"></script>
   </head>
   <body data-status="idle" data-facing="environment" data-tracking="idle">
     <main class="camera-lab">
