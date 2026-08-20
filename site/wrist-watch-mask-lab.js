@@ -1,3 +1,4 @@
+import "./axis-p0-stable-lab.js?v=axisstable.1";
 import "./mask-10s-lab.js?v=measure.1";
 import "./mask-photo-share.js?v=share.1";
 import "./mask-state-compat.js?v=axis.1";
