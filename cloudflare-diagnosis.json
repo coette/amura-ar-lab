@@ -1,0 +1,636 @@
+{
+  "generatedAt": "2026-08-20T19:57:31.172Z",
+  "githubSha": "137280ba1a2b40464ca1da0fd7007dbeb352837c",
+  "local": {
+    "siteTitle": "AMURA · AUTORRESCATE · R17.1",
+    "distTitle": "AMURA · AUTORRESCATE · R17.1",
+    "siteEqualsDist": true,
+    "siteHasR171": true,
+    "distHasR171": true
+  },
+  "project": {
+    "name": "amura-engine-2",
+    "productionBranch": "main",
+    "subdomain": "amura-engine-2.pages.dev",
+    "source": null,
+    "latestDeployment": {
+      "id": "51489e10-3b46-4490-9944-3edc5404d8de",
+      "url": "https://51489e10.amura-engine-2.pages.dev",
+      "aliases": null,
+      "created_on": "2026-08-20T19:51:05.042726Z",
+      "environment": "production",
+      "trigger": {
+        "type": "ad_hoc",
+        "metadata": {
+          "branch": "main",
+          "commit_hash": "031a1a9fa12e54fb4f3722c1f7924bd57a91c676",
+          "commit_message": "Add one-shot Cloudflare deployment diagnosis",
+          "commit_dirty": true
+        }
+      }
+    }
+  },
+  "publicMain": {
+    "status": 200,
+    "finalUrl": "https://amura-engine-2.pages.dev/?diag=1787255851173",
+    "title": "AMURA · AUTORRESCATE · R17.1",
+    "eyebrow": "LABORATORIO · R17.1",
+    "hasR171": true,
+    "hasR17": true,
+    "hasR16": true,
+    "bytes": 6784,
+    "head": "<!doctype html>\n<html lang=\"es\">\n<head>\n<meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1, viewport-fit=cover\"><meta name=\"theme-color\" content=\"#000000\"><meta name=\"apple-mobile-web-app-capable\" content=\"yes\"><meta name=\"apple-mobile-web-app-status-bar-style\" content=\"black-translucent\"><meta name=\"apple-mobile-web-app-title\" content=\"AMURA R17.1\"><meta name=\"mobile-web-app-capable\" content=\"yes\">\n<title>AMURA · AUTORRESCATE · R17.1</title>\n<link rel=\"mani"
+  },
+  "deployments": [
+    {
+      "id": "51489e10-3b46-4490-9944-3edc5404d8de",
+      "created_on": "2026-08-20T19:51:05.042726Z",
+      "environment": "production",
+      "url": "https://51489e10.amura-engine-2.pages.dev",
+      "aliases": null,
+      "trigger": {
+        "type": "ad_hoc",
+        "metadata": {
+          "branch": "main",
+          "commit_hash": "031a1a9fa12e54fb4f3722c1f7924bd57a91c676",
+          "commit_message": "Add one-shot Cloudflare deployment diagnosis",
+          "commit_dirty": true
+        }
+      },
+      "stages": [
+        {
+          "name": "queued",
+          "started_on": "2026-08-20T19:51:05.042726Z",
+          "ended_on": null,
+          "status": "active"
+        },
+        {
+          "name": "initialize",
+          "started_on": null,
+          "ended_on": null,
+          "status": "idle"
+        },
+        {
+          "name": "clone_repo",
+          "started_on": null,
+          "ended_on": null,
+          "status": "idle"
+        },
+        {
+          "name": "build",
+          "started_on": null,
+          "ended_on": null,
+          "status": "idle"
+        },
+        {
+          "name": "deploy",
+          "started_on": null,
+          "ended_on": "2026-08-20T19:51:06.296736Z",
+          "status": "success"
+        }
+      ],
+      "served": {
+        "status": 200,
+        "finalUrl": "https://51489e10.amura-engine-2.pages.dev/?diag=1787255851350",
+        "title": "AMURA · AUTORRESCATE · R17.1",
+        "eyebrow": "LABORATORIO · R17.1",
+        "hasR171": true,
+        "hasR17": true,
+        "hasR16": true,
+        "bytes": 6784,
+        "head": "<!doctype html>\n<html lang=\"es\">\n<head>\n<meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1, viewport-fit=cover\"><meta name=\"theme-color\" content=\"#000000\"><meta name=\"apple-mobile-web-app-capable\" content=\"yes\"><meta name=\"apple-mobile-web-app-status-bar-style\" content=\"black-translucent\"><meta name=\"apple-mobile-web-app-title\" content=\"AMURA R17.1\"><meta name=\"mobile-web-app-capable\" content=\"yes\">\n<title>AMURA · AUTORRESCATE · R17.1</title>\n<link rel=\"mani"
+      }
+    },
+    {
+      "id": "39d599d6-8ed2-4ae4-b435-782bb0a8a179",
+      "created_on": "2026-08-20T19:44:02.977084Z",
+      "environment": "production",
+      "url": "https://39d599d6.amura-engine-2.pages.dev",
+      "aliases": null,
+      "trigger": {
+        "type": "ad_hoc",
+        "metadata": {
+          "branch": "main",
+          "commit_hash": "d398d933ce571d52a9b1f0c7565008d32fd35cee",
+          "commit_message": "Remove temporary 5-minute Cloudflare deploy cron",
+          "commit_dirty": true
+        }
+      },
+      "stages": [
+        {
+          "name": "queued",
+          "started_on": "2026-08-20T19:44:02.977084Z",
+          "ended_on": null,
+          "status": "active"
+        },
+        {
+          "name": "initialize",
+          "started_on": null,
+          "ended_on": null,
+          "status": "idle"
+        },
+        {
+          "name": "clone_repo",
+          "started_on": null,
+          "ended_on": null,
+          "status": "idle"
+        },
+        {
+          "name": "build",
+          "started_on": null,
+          "ended_on": null,
+          "status": "idle"
+        },
+        {
+          "name": "deploy",
+          "started_on": null,
+          "ended_on": "2026-08-20T19:44:04.569841Z",
+          "status": "success"
+        }
+      ],
+      "served": {
+        "status": 200,
+        "finalUrl": "https://39d599d6.amura-engine-2.pages.dev/?diag=1787255851498",
+        "title": "AMURA · AUTORRESCATE · R17.1",
+        "eyebrow": "LABORATORIO · R17.1",
+        "hasR171": true,
+        "hasR17": true,
+        "hasR16": true,
+        "bytes": 6784,
+        "head": "<!doctype html>\n<html lang=\"es\">\n<head>\n<meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1, viewport-fit=cover\"><meta name=\"theme-color\" content=\"#000000\"><meta name=\"apple-mobile-web-app-capable\" content=\"yes\"><meta name=\"apple-mobile-web-app-status-bar-style\" content=\"black-translucent\"><meta name=\"apple-mobile-web-app-title\" content=\"AMURA R17.1\"><meta name=\"mobile-web-app-capable\" content=\"yes\">\n<title>AMURA · AUTORRESCATE · R17.1</title>\n<link rel=\"mani"
+      }
+    },
+    {
+      "id": "7bc0c251-ab73-4443-b2eb-ea64076bad96",
+      "created_on": "2026-08-20T19:43:55.710386Z",
+      "environment": "production",
+      "url": "https://7bc0c251.amura-engine-2.pages.dev",
+      "aliases": null,
+      "trigger": {
+        "type": "ad_hoc",
+        "metadata": {
+          "branch": "main",
+          "commit_hash": "0c7d0e03eb955ae3f44ca1b34408094e395dc32b",
+          "commit_message": "Add one-shot Cloudflare deployment cleanup",
+          "commit_dirty": true
+        }
+      },
+      "stages": [
+        {
+          "name": "queued",
+          "started_on": "2026-08-20T19:43:55.710386Z",
+          "ended_on": null,
+          "status": "active"
+        },
+        {
+          "name": "initialize",
+          "started_on": null,
+          "ended_on": null,
+          "status": "idle"
+        },
+        {
+          "name": "clone_repo",
+          "started_on": null,
+          "ended_on": null,
+          "status": "idle"
+        },
+        {
+          "name": "build",
+          "started_on": null,
+          "ended_on": null,
+          "status": "idle"
+        },
+        {
+          "name": "deploy",
+          "started_on": null,
+          "ended_on": "2026-08-20T19:43:59.141562Z",
+          "status": "success"
+        }
+      ],
+      "served": {
+        "status": 200,
+        "finalUrl": "https://7bc0c251.amura-engine-2.pages.dev/?diag=1787255851572",
+        "title": "AMURA · AUTORRESCATE · R17.1",
+        "eyebrow": "LABORATORIO · R17.1",
+        "hasR171": true,
+        "hasR17": true,
+        "hasR16": true,
+        "bytes": 6784,
+        "head": "<!doctype html>\n<html lang=\"es\">\n<head>\n<meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1, viewport-fit=cover\"><meta name=\"theme-color\" content=\"#000000\"><meta name=\"apple-mobile-web-app-capable\" content=\"yes\"><meta name=\"apple-mobile-web-app-status-bar-style\" content=\"black-translucent\"><meta name=\"apple-mobile-web-app-title\" content=\"AMURA R17.1\"><meta name=\"mobile-web-app-capable\" content=\"yes\">\n<title>AMURA · AUTORRESCATE · R17.1</title>\n<link rel=\"mani"
+      }
+    },
+    {
+      "id": "4290efc7-a0af-4906-9343-43c905d8f09f",
+      "created_on": "2026-08-20T19:31:17.319821Z",
+      "environment": "production",
+      "url": "https://4290efc7.amura-engine-2.pages.dev",
+      "aliases": null,
+      "trigger": {
+        "type": "ad_hoc",
+        "metadata": {
+          "branch": "main",
+          "commit_hash": "8e81dfd4db4db45b61fd617aa54c2ece27510927",
+          "commit_message": "Harden Cloudflare deploy trigger for R17",
+          "commit_dirty": true
+        }
+      },
+      "stages": [
+        {
+          "name": "queued",
+          "started_on": "2026-08-20T19:31:17.319821Z",
+          "ended_on": null,
+          "status": "active"
+        },
+        {
+          "name": "initialize",
+          "started_on": null,
+          "ended_on": null,
+          "status": "idle"
+        },
+        {
+          "name": "clone_repo",
+          "started_on": null,
+          "ended_on": null,
+          "status": "idle"
+        },
+        {
+          "name": "build",
+          "started_on": null,
+          "ended_on": null,
+          "status": "idle"
+        },
+        {
+          "name": "deploy",
+          "started_on": null,
+          "ended_on": "2026-08-20T19:31:18.804692Z",
+          "status": "success"
+        }
+      ],
+      "served": {
+        "status": 200,
+        "finalUrl": "https://4290efc7.amura-engine-2.pages.dev/?diag=1787255851658",
+        "title": "AMURA · AUTORRESCATE · R17.1",
+        "eyebrow": "LABORATORIO · R17.1",
+        "hasR171": true,
+        "hasR17": true,
+        "hasR16": true,
+        "bytes": 6784,
+        "head": "<!doctype html>\n<html lang=\"es\">\n<head>\n<meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1, viewport-fit=cover\"><meta name=\"theme-color\" content=\"#000000\"><meta name=\"apple-mobile-web-app-capable\" content=\"yes\"><meta name=\"apple-mobile-web-app-status-bar-style\" content=\"black-translucent\"><meta name=\"apple-mobile-web-app-title\" content=\"AMURA R17.1\"><meta name=\"mobile-web-app-capable\" content=\"yes\">\n<title>AMURA · AUTORRESCATE · R17.1</title>\n<link rel=\"mani"
+      }
+    },
+    {
+      "id": "9e33814e-45ff-4643-9bfc-9583303c328b",
+      "created_on": "2026-08-20T19:23:57.798478Z",
+      "environment": "production",
+      "url": "https://9e33814e.amura-engine-2.pages.dev",
+      "aliases": null,
+      "trigger": {
+        "type": "ad_hoc",
+        "metadata": {
+          "branch": "main",
+          "commit_hash": "06032157b71d1d846b79c9fed213728f53a680f7",
+          "commit_message": "Force R17.1 deploy and cache bust",
+          "commit_dirty": false
+        }
+      },
+      "stages": [
+        {
+          "name": "queued",
+          "started_on": "2026-08-20T19:23:57.798478Z",
+          "ended_on": null,
+          "status": "active"
+        },
+        {
+          "name": "initialize",
+          "started_on": null,
+          "ended_on": null,
+          "status": "idle"
+        },
+        {
+          "name": "clone_repo",
+          "started_on": null,
+          "ended_on": null,
+          "status": "idle"
+        },
+        {
+          "name": "build",
+          "started_on": null,
+          "ended_on": null,
+          "status": "idle"
+        },
+        {
+          "name": "deploy",
+          "started_on": null,
+          "ended_on": "2026-08-20T19:23:59.040297Z",
+          "status": "success"
+        }
+      ],
+      "served": {
+        "status": 200,
+        "finalUrl": "https://9e33814e.amura-engine-2.pages.dev/?diag=1787255851728",
+        "title": "AMURA · AUTORRESCATE · R17.1",
+        "eyebrow": "LABORATORIO · R17.1",
+        "hasR171": true,
+        "hasR17": true,
+        "hasR16": true,
+        "bytes": 6784,
+        "head": "<!doctype html>\n<html lang=\"es\">\n<head>\n<meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1, viewport-fit=cover\"><meta name=\"theme-color\" content=\"#000000\"><meta name=\"apple-mobile-web-app-capable\" content=\"yes\"><meta name=\"apple-mobile-web-app-status-bar-style\" content=\"black-translucent\"><meta name=\"apple-mobile-web-app-title\" content=\"AMURA R17.1\"><meta name=\"mobile-web-app-capable\" content=\"yes\">\n<title>AMURA · AUTORRESCATE · R17.1</title>\n<link rel=\"mani"
+      }
+    },
+    {
+      "id": "db6f5839-1b36-42cb-bc0b-7e65c6fc15a2",
+      "created_on": "2026-08-20T19:12:49.742303Z",
+      "environment": "production",
+      "url": "https://db6f5839.amura-engine-2.pages.dev",
+      "aliases": null,
+      "trigger": {
+        "type": "ad_hoc",
+        "metadata": {
+          "branch": "main",
+          "commit_hash": "1b3064caaa3a0af4017edac8029f80876b4682ab",
+          "commit_message": "R17 harden frozen-state timestamps and P0 bookkeeping",
+          "commit_dirty": false
+        }
+      },
+      "stages": [
+        {
+          "name": "queued",
+          "started_on": "2026-08-20T19:12:49.742303Z",
+          "ended_on": null,
+          "status": "active"
+        },
+        {
+          "name": "initialize",
+          "started_on": null,
+          "ended_on": null,
+          "status": "idle"
+        },
+        {
+          "name": "clone_repo",
+          "started_on": null,
+          "ended_on": null,
+          "status": "idle"
+        },
+        {
+          "name": "build",
+          "started_on": null,
+          "ended_on": null,
+          "status": "idle"
+        },
+        {
+          "name": "deploy",
+          "started_on": null,
+          "ended_on": "2026-08-20T19:12:51.033752Z",
+          "status": "success"
+        }
+      ],
+      "served": {
+        "status": 200,
+        "finalUrl": "https://db6f5839.amura-engine-2.pages.dev/?diag=1787255851799",
+        "title": "AMURA · AUTORRESCATE · R17",
+        "eyebrow": "LABORATORIO · R17",
+        "hasR171": false,
+        "hasR17": true,
+        "hasR16": true,
+        "bytes": 6772,
+        "head": "<!doctype html>\n<html lang=\"es\">\n<head>\n<meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1, viewport-fit=cover\"><meta name=\"theme-color\" content=\"#000000\"><meta name=\"apple-mobile-web-app-capable\" content=\"yes\"><meta name=\"apple-mobile-web-app-status-bar-style\" content=\"black-translucent\"><meta name=\"apple-mobile-web-app-title\" content=\"AMURA R17\"><meta name=\"mobile-web-app-capable\" content=\"yes\">\n<title>AMURA · AUTORRESCATE · R17</title>\n<link rel=\"manifest"
+      }
+    },
+    {
+      "id": "ae4062f1-2ce5-410a-a4a3-125357920336",
+      "created_on": "2026-08-20T18:49:02.045351Z",
+      "environment": "production",
+      "url": "https://ae4062f1.amura-engine-2.pages.dev",
+      "aliases": null,
+      "trigger": {
+        "type": "ad_hoc",
+        "metadata": {
+          "branch": "main",
+          "commit_hash": "b3426615c0d43bafde486a665404574db17902a9",
+          "commit_message": "R16 load bank compatibility fix",
+          "commit_dirty": false
+        }
+      },
+      "stages": [
+        {
+          "name": "queued",
+          "started_on": "2026-08-20T18:49:02.045351Z",
+          "ended_on": null,
+          "status": "active"
+        },
+        {
+          "name": "initialize",
+          "started_on": null,
+          "ended_on": null,
+          "status": "idle"
+        },
+        {
+          "name": "clone_repo",
+          "started_on": null,
+          "ended_on": null,
+          "status": "idle"
+        },
+        {
+          "name": "build",
+          "started_on": null,
+          "ended_on": null,
+          "status": "idle"
+        },
+        {
+          "name": "deploy",
+          "started_on": null,
+          "ended_on": "2026-08-20T18:49:03.737881Z",
+          "status": "success"
+        }
+      ],
+      "served": {
+        "status": 200,
+        "finalUrl": "https://ae4062f1.amura-engine-2.pages.dev/?diag=1787255852014",
+        "title": "AMURA · MÉTODO OFICIAL · R16",
+        "eyebrow": "LABORATORIO · R16",
+        "hasR171": false,
+        "hasR17": false,
+        "hasR16": true,
+        "bytes": 6735,
+        "head": "<!doctype html>\n<html lang=\"es\">\n<head>\n<meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1, viewport-fit=cover\"><meta name=\"theme-color\" content=\"#000000\"><meta name=\"apple-mobile-web-app-capable\" content=\"yes\"><meta name=\"apple-mobile-web-app-status-bar-style\" content=\"black-translucent\"><meta name=\"apple-mobile-web-app-title\" content=\"AMURA R16\"><meta name=\"mobile-web-app-capable\" content=\"yes\">\n<title>AMURA · MÉTODO OFICIAL · R16</title>\n<link rel=\"manife"
+      }
+    },
+    {
+      "id": "37c27e8b-5ab1-49e3-89f1-08f17f812d40",
+      "created_on": "2026-08-20T18:32:48.203033Z",
+      "environment": "production",
+      "url": "https://37c27e8b.amura-engine-2.pages.dev",
+      "aliases": null,
+      "trigger": {
+        "type": "ad_hoc",
+        "metadata": {
+          "branch": "main",
+          "commit_hash": "88b32ec15c8619c9b4135a2edfc33de7da106c01",
+          "commit_message": "R15: final branch tip",
+          "commit_dirty": false
+        }
+      },
+      "stages": [
+        {
+          "name": "queued",
+          "started_on": "2026-08-20T18:32:48.203033Z",
+          "ended_on": null,
+          "status": "active"
+        },
+        {
+          "name": "initialize",
+          "started_on": null,
+          "ended_on": null,
+          "status": "idle"
+        },
+        {
+          "name": "clone_repo",
+          "started_on": null,
+          "ended_on": null,
+          "status": "idle"
+        },
+        {
+          "name": "build",
+          "started_on": null,
+          "ended_on": null,
+          "status": "idle"
+        },
+        {
+          "name": "deploy",
+          "started_on": null,
+          "ended_on": "2026-08-20T18:32:49.787275Z",
+          "status": "success"
+        }
+      ],
+      "served": {
+        "status": 200,
+        "finalUrl": "https://37c27e8b.amura-engine-2.pages.dev/?diag=1787255852191",
+        "title": "AMURA · FINAL ACTUAL VS NUEVO · R15",
+        "eyebrow": "LABORATORIO · R15",
+        "hasR171": false,
+        "hasR17": false,
+        "hasR16": false,
+        "bytes": 7289,
+        "head": "<!doctype html>\n<html lang=\"es\">\n  <head>\n    <meta charset=\"utf-8\">\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1, viewport-fit=cover\">\n    <meta name=\"theme-color\" content=\"#000000\">\n    <meta name=\"apple-mobile-web-app-capable\" content=\"yes\">\n    <meta name=\"apple-mobile-web-app-status-bar-style\" content=\"black-translucent\">\n    <meta name=\"apple-mobile-web-app-title\" content=\"AMURA R15\">\n    <meta name=\"mobile-web-app-capable\" content=\"yes\">\n    <title>AMURA · FINAL "
+      }
+    },
+    {
+      "id": "2b61e54f-15a5-4f39-9b9c-abc9fd27f620",
+      "created_on": "2026-08-20T17:54:19.994124Z",
+      "environment": "production",
+      "url": "https://2b61e54f.amura-engine-2.pages.dev",
+      "aliases": null,
+      "trigger": {
+        "type": "ad_hoc",
+        "metadata": {
+          "branch": "main",
+          "commit_hash": "f68ce34e8a4d99dd1f368214b1889fa7b0beaa78",
+          "commit_message": "R14: expose PCA A/B experiment and cache bust",
+          "commit_dirty": false
+        }
+      },
+      "stages": [
+        {
+          "name": "queued",
+          "started_on": "2026-08-20T17:54:19.994124Z",
+          "ended_on": null,
+          "status": "active"
+        },
+        {
+          "name": "initialize",
+          "started_on": null,
+          "ended_on": null,
+          "status": "idle"
+        },
+        {
+          "name": "clone_repo",
+          "started_on": null,
+          "ended_on": null,
+          "status": "idle"
+        },
+        {
+          "name": "build",
+          "started_on": null,
+          "ended_on": null,
+          "status": "idle"
+        },
+        {
+          "name": "deploy",
+          "started_on": null,
+          "ended_on": "2026-08-20T17:54:21.758761Z",
+          "status": "success"
+        }
+      ],
+      "served": {
+        "status": 200,
+        "finalUrl": "https://2b61e54f.amura-engine-2.pages.dev/?diag=1787255852406",
+        "title": "AMURA · EXPERIMENTO PCA · R14",
+        "eyebrow": "LABORATORIO · R14",
+        "hasR171": false,
+        "hasR17": false,
+        "hasR16": false,
+        "bytes": 8589,
+        "head": "<!doctype html>\n<html lang=\"es\">\n  <head>\n    <meta charset=\"utf-8\">\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1, viewport-fit=cover\">\n    <meta name=\"theme-color\" content=\"#000000\">\n    <meta name=\"apple-mobile-web-app-capable\" content=\"yes\">\n    <meta name=\"apple-mobile-web-app-status-bar-style\" content=\"black-translucent\">\n    <meta name=\"apple-mobile-web-app-title\" content=\"AMURA R14\">\n    <meta name=\"mobile-web-app-capable\" content=\"yes\">\n    <title>AMURA · EXPERI"
+      }
+    },
+    {
+      "id": "da49f96d-d45c-4184-86d6-def07c7cb5dd",
+      "created_on": "2026-08-20T17:50:17.359502Z",
+      "environment": "production",
+      "url": "https://da49f96d.amura-engine-2.pages.dev",
+      "aliases": null,
+      "trigger": {
+        "type": "ad_hoc",
+        "metadata": {
+          "branch": "main",
+          "commit_hash": "26d4b9f83b48e2873d7cdba032b0d01ff689817f",
+          "commit_message": "Remove accidental temporary file",
+          "commit_dirty": false
+        }
+      },
+      "stages": [
+        {
+          "name": "queued",
+          "started_on": "2026-08-20T17:50:17.359502Z",
+          "ended_on": null,
+          "status": "active"
+        },
+        {
+          "name": "initialize",
+          "started_on": null,
+          "ended_on": null,
+          "status": "idle"
+        },
+        {
+          "name": "clone_repo",
+          "started_on": null,
+          "ended_on": null,
+          "status": "idle"
+        },
+        {
+          "name": "build",
+          "started_on": null,
+          "ended_on": null,
+          "status": "idle"
+        },
+        {
+          "name": "deploy",
+          "started_on": null,
+          "ended_on": "2026-08-20T17:50:18.758211Z",
+          "status": "success"
+        }
+      ],
+      "served": {
+        "status": 200,
+        "finalUrl": "https://da49f96d.amura-engine-2.pages.dev/?diag=1787255852622",
+        "title": "AMURA · CÁMARA / BANCO · R13.2",
+        "eyebrow": "LABORATORIO · R13.2",
+        "hasR171": false,
+        "hasR17": false,
+        "hasR16": false,
+        "bytes": 8592,
+        "head": "<!doctype html>\n<html lang=\"es\">\n  <head>\n    <meta charset=\"utf-8\">\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1, viewport-fit=cover\">\n    <meta name=\"theme-color\" content=\"#000000\">\n    <meta name=\"apple-mobile-web-app-capable\" content=\"yes\">\n    <meta name=\"apple-mobile-web-app-status-bar-style\" content=\"black-translucent\">\n    <meta name=\"apple-mobile-web-app-title\" content=\"AMURA R13.2\">\n    <meta name=\"mobile-web-app-capable\" content=\"yes\">\n    <title>AMURA · CÁMA"
+      }
+    }
+  ]
+}
