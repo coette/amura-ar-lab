@@ -1,3 +1,5 @@
+import "./mask-10s-lab.js?v=measure.1";
+
 const LAB_STATE = {
   status: "listo",
   revision: "MASK-LAB",
