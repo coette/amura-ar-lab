@@ -6,127 +6,36 @@
     <meta name="theme-color" content="#000000">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="AMURA R14">
+    <meta name="apple-mobile-web-app-title" content="AMURA R15">
     <meta name="mobile-web-app-capable" content="yes">
-    <title>AMURA · EXPERIMENTO PCA · R14</title>
+    <title>AMURA · FINAL ACTUAL VS NUEVO · R15</title>
     <link rel="manifest" href="manifest.webmanifest?v=11.2">
     <link rel="icon" href="icon.svg" type="image/svg+xml">
     <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
     <link rel="stylesheet" href="styles.css?v=11.2">
     <style>
-      #tunerRoot,
-      #metricDepthHud,
-      #threeCanvas,
-      #diagnosticsPanel,
-      .controls { display: none !important; }
-
-      #trackingCanvas {
-        display: block !important;
-        position: absolute;
-        inset: 0;
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-        z-index: 40 !important;
-        pointer-events: none;
-      }
-
-      #maskCanvas {
-        position: absolute;
-        inset: 0;
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-        z-index: 30;
-        pointer-events: none;
-      }
-
-      #maskLabHud {
-        position: absolute;
-        top: calc(env(safe-area-inset-top, 0px) + 10px);
-        left: 10px;
-        z-index: 100020;
-        width: min(318px, calc(100vw - 20px));
-        padding: 10px 12px;
-        border-radius: 10px;
-        background: rgba(4, 8, 14, .78);
-        color: #fff;
-        font: 700 12px/1.4 Arial, sans-serif;
-        pointer-events: none;
-        backdrop-filter: blur(8px);
-      }
-
-      #maskLabHud .lab-title {
-        margin: 0 0 6px;
-        font-size: 12px;
-        letter-spacing: .06em;
-      }
-
-      #maskLabHud dl {
-        display: grid;
-        grid-template-columns: auto 1fr;
-        gap: 3px 8px;
-        margin: 0;
-      }
-
-      #maskLabHud dt { opacity: .62; }
-      #maskLabHud dd { margin: 0; text-align: right; }
-
-      #maskHint {
-        margin: 8px 0 0;
-        padding-top: 7px;
-        border-top: 1px solid rgba(255,255,255,.18);
-        font-weight: 600;
-        opacity: .92;
-      }
-
-      .mask-action {
-        position: absolute;
-        z-index: 100030;
-        min-height: 48px;
-        border: 1px solid rgba(255,255,255,.42);
-        border-radius: 999px;
-        padding: 0 18px;
-        background: rgba(5, 10, 17, .82);
-        color: #fff;
-        font: 800 12px/1 Arial, sans-serif;
-        letter-spacing: .04em;
-        backdrop-filter: blur(8px);
-      }
-
-      #maskReadyButton {
-        left: 50%;
-        bottom: calc(env(safe-area-inset-bottom, 0px) + 18px);
-        transform: translateX(-50%);
-        background: rgba(0, 133, 164, .90);
-        min-width: 190px;
-      }
-
-      #maskPhotoButton {
-        left: 12px;
-        bottom: calc(env(safe-area-inset-bottom, 0px) + 18px);
-      }
-
-      #maskResetButton {
-        right: 12px;
-        bottom: calc(env(safe-area-inset-bottom, 0px) + 18px);
-      }
-
-      #trackingHud { display: none !important; }
-
-      body[data-status="idle"] #maskLabHud,
-      body[data-status="requesting"] #maskLabHud,
-      body[data-status="idle"] .mask-action,
-      body[data-status="requesting"] .mask-action {
-        display: none !important;
-      }
+      #tunerRoot,#metricDepthHud,#threeCanvas,#diagnosticsPanel,.controls { display: none !important; }
+      #trackingCanvas { display:block !important;position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:40 !important;pointer-events:none; }
+      #maskCanvas { position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:30;pointer-events:none; }
+      #maskLabHud { position:absolute;top:calc(env(safe-area-inset-top,0px) + 10px);left:10px;z-index:100020;width:min(318px,calc(100vw - 20px));padding:10px 12px;border-radius:10px;background:rgba(4,8,14,.78);color:#fff;font:700 12px/1.4 Arial,sans-serif;pointer-events:none;backdrop-filter:blur(8px); }
+      #maskLabHud .lab-title { margin:0 0 6px;font-size:12px;letter-spacing:.06em; }
+      #maskLabHud dl { display:grid;grid-template-columns:auto 1fr;gap:3px 8px;margin:0; }
+      #maskLabHud dt { opacity:.62; }
+      #maskLabHud dd { margin:0;text-align:right; }
+      #maskHint { margin:8px 0 0;padding-top:7px;border-top:1px solid rgba(255,255,255,.18);font-weight:600;opacity:.92; }
+      .mask-action { position:absolute;z-index:100030;min-height:48px;border:1px solid rgba(255,255,255,.42);border-radius:999px;padding:0 18px;background:rgba(5,10,17,.82);color:#fff;font:800 12px/1 Arial,sans-serif;letter-spacing:.04em;backdrop-filter:blur(8px); }
+      #maskReadyButton { left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 18px);transform:translateX(-50%);background:rgba(0,133,164,.90);min-width:190px; }
+      #maskPhotoButton { left:12px;bottom:calc(env(safe-area-inset-bottom,0px) + 18px); }
+      #maskResetButton { right:12px;bottom:calc(env(safe-area-inset-bottom,0px) + 18px); }
+      #trackingHud { display:none !important; }
+      body[data-status="idle"] #maskLabHud,body[data-status="requesting"] #maskLabHud,body[data-status="idle"] .mask-action,body[data-status="requesting"] .mask-action { display:none !important; }
     </style>
     <script src="camera.js?v=11.2" defer></script>
     <script src="camera-lens-lock-lab.js?v=lens.1" type="module"></script>
     <script type="importmap">
       {
         "imports": {
-          "./wrist-watch.js?v=11.2": "./wrist-watch-mask-lab.js?v=mask.14",
+          "./wrist-watch.js?v=11.2": "./wrist-watch-mask-lab.js?v=mask.15",
           "./wrist-stabilizer.js?v=11.2": "./wrist-stabilizer.js?v=11.3.0",
           "./tuner.js?v=11.2": "./tuner.js?v=11.3.0",
           "./wrist-frame.js?v=11.2": "./wrist-frame.js?v=11.3.0",
@@ -139,56 +48,29 @@
   </head>
   <body data-status="idle" data-facing="environment" data-tracking="idle">
     <main class="camera-lab">
-      <video
-        id="cameraVideo"
-        class="camera-video"
-        autoplay
-        muted
-        playsinline
-        aria-label="Vista en directo de la cámara"
-      ></video>
+      <video id="cameraVideo" class="camera-video" autoplay muted playsinline aria-label="Vista en directo de la cámara"></video>
       <div class="camera-shade" aria-hidden="true"></div>
       <canvas id="threeCanvas" class="three-canvas" aria-hidden="true"></canvas>
       <canvas id="maskCanvas" aria-hidden="true"></canvas>
       <canvas id="trackingCanvas" class="tracking-canvas" aria-hidden="true"></canvas>
 
       <header class="topbar" style="display:none !important">
-        <div>
-          <p class="brand">AMURA</p>
-          <p class="phase">LAB · PCA A/B · R14</p>
-        </div>
-        <div class="status-pill" role="status" aria-live="polite">
-          <span class="status-dot" aria-hidden="true"></span>
-          <span id="statusLabel">EN ESPERA</span>
-        </div>
+        <div><p class="brand">AMURA</p><p class="phase">LAB · FINAL CHAIN A/B · R15</p></div>
+        <div class="status-pill" role="status" aria-live="polite"><span class="status-dot" aria-hidden="true"></span><span id="statusLabel">EN ESPERA</span></div>
       </header>
 
-      <div id="trackingHud" class="tracking-hud" role="status" aria-live="polite" hidden>
-        <span class="tracking-dot" aria-hidden="true"></span>
-        <span id="trackingLabel">MEDIAPIPE EN ESPERA</span>
-      </div>
+      <div id="trackingHud" class="tracking-hud" role="status" aria-live="polite" hidden><span class="tracking-dot" aria-hidden="true"></span><span id="trackingLabel">MEDIAPIPE EN ESPERA</span></div>
 
       <section id="startPanel" class="start-card" aria-labelledby="cameraTitle">
-        <p class="eyebrow">LABORATORIO · R14</p>
-        <h1 id="cameraTitle">PCA ACTUAL VS PCA POR SECCIONES</h1>
-        <p id="statusMessage" class="lead">
-          Misma foto y misma nube. Dos métodos calculados a la vez.
-        </p>
-        <p class="privacy">
-          En el banco podrás marcar dos puntos sobre el eje real del antebrazo y comparar el error de ambos métodos.
-        </p>
-        <p id="installHint" class="install-hint">
-          SIN BARRAS EN IPHONE/IPAD: COMPARTIR → AÑADIR A PANTALLA DE INICIO
-        </p>
-        <button id="startButton" class="primary-button" type="button">
-          Abrir cámara trasera
-        </button>
+        <p class="eyebrow">LABORATORIO · R15</p>
+        <h1 id="cameraTitle">FINAL ACTUAL VS FINAL NUEVO</h1>
+        <p id="statusMessage" class="lead">Blanco = cadena actual. Naranja = cadena nueva partiendo del PCA por secciones.</p>
+        <p class="privacy">No tienes que marcar nada. Recorre las 8 fotos y compara blanco contra naranja.</p>
+        <p id="installHint" class="install-hint">SIN BARRAS EN IPHONE/IPAD: COMPARTIR → AÑADIR A PANTALLA DE INICIO</p>
+        <button id="startButton" class="primary-button" type="button">Abrir cámara trasera</button>
       </section>
 
-      <section id="requestPanel" class="requesting" role="status" aria-live="polite" hidden>
-        <span class="spinner" aria-hidden="true"></span>
-        <p>Esperando permiso de cámara…</p>
-      </section>
+      <section id="requestPanel" class="requesting" role="status" aria-live="polite" hidden><span class="spinner" aria-hidden="true"></span><p>Esperando permiso de cámara…</p></section>
 
       <aside id="maskLabHud" aria-label="Datos internos de máscara">
         <p class="lab-title">LAB INTERNO</p>
@@ -208,26 +90,15 @@
       <button id="maskResetButton" class="mask-action" type="button" hidden>REPETIR</button>
 
       <aside id="diagnosticsPanel" class="diagnostics" aria-label="Diagnóstico de cámara" hidden style="display:none !important">
-        <div class="diagnostics-heading">
-          <div><p class="eyebrow">DIAGNÓSTICO</p><h2>Datos</h2></div>
-          <button id="closeDiagnosticsButton" class="icon-button" type="button" aria-label="Cerrar diagnóstico">×</button>
-        </div>
+        <div class="diagnostics-heading"><div><p class="eyebrow">DIAGNNÓSTICO</p><h2>Datos</h2></div><button id="closeDiagnosticsButton" class="icon-button" type="button" aria-label="Cerrar diagnóstico">×</button></div>
         <dl id="diagnosticsList"></dl>
       </aside>
 
       <nav class="controls" aria-label="Controles técnicos ocultos">
-        <button id="diagnosticsButton" class="control-button" type="button" aria-pressed="false">
-          <span class="control-label">DIAG</span><span id="fpsValue" class="control-value">DATOS</span>
-        </button>
-        <button id="guidesButton" class="control-button" type="button" aria-pressed="true">
-          <span class="control-label">GUÍAS</span><span id="guidesValue" class="control-value">OCULTAR</span>
-        </button>
-        <button id="switchCameraButton" class="control-button" type="button" hidden>
-          <span class="control-label">CÁMARA</span><span id="switchCameraValue" class="control-value">FRONTAL</span>
-        </button>
-        <button id="stopButton" class="control-button" hidden>
-          <span class="control-label">SESIÓN</span><span class="control-value">DETENER</span>
-        </button>
+        <button id="diagnosticsButton" class="control-button" type="button" aria-pressed="false"><span class="control-label">DIAG</span><span id="fpsValue" class="control-value">DATOS</span></button>
+        <button id="guidesButton" class="control-button" type="button" aria-pressed="true"><span class="control-label">GUÍAS</span><span id="guidesValue" class="control-value">OCULTAR</span></button>
+        <button id="switchCameraButton" class="control-button" type="button" hidden><span class="control-label">CÁMARA</span><span id="switchCameraValue" class="control-value">FRONTAL</span></button>
+        <button id="stopButton" class="control-button" hidden><span class="control-label">SESIÓN</span><span class="control-value">DETENER</span></button>
       </nav>
     </main>
   </body>
