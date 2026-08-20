@@ -8,41 +8,131 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="AMURA AR">
     <meta name="mobile-web-app-capable" content="yes">
-    <title>Amura AR · AR-04 · EJE REAL</title>
+    <title>Amura AR · LAB MÁSCARA ANTEBRAZO</title>
     <link rel="manifest" href="manifest.webmanifest?v=11.2">
     <link rel="icon" href="icon.svg" type="image/svg+xml">
     <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
     <link rel="stylesheet" href="styles.css?v=11.2">
     <style>
-      /* Corredor solo durante calibración. Después: Hands + eje 3D calibrado. */
       #tunerRoot,
-      #trackingCanvas,
-      #metricDepthHud { display: none !important; }
-      #forearmEdgeCanvas { z-index: 99980 !important; }
-      #ar04Marker {
+      #metricDepthHud,
+      #threeCanvas,
+      #diagnosticsPanel,
+      .controls { display: none !important; }
+
+      #trackingCanvas {
+        display: block !important;
         position: absolute;
-        top: calc(env(safe-area-inset-top, 0px) + 8px);
-        left: 10px;
-        z-index: 99999;
-        padding: 7px 10px;
-        border-radius: 9px;
-        background: #00e5ff;
-        color: #07111f;
-        font: 800 11px/1.2 Arial, sans-serif;
-        letter-spacing: .04em;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        z-index: 40 !important;
         pointer-events: none;
-        box-shadow: 0 2px 10px rgba(0,0,0,.35);
       }
-      .controls { z-index: 100010; }
-      body[data-calibrating="true"] .controls { display: none !important; }
-      #forearmEdgeButton { display: none !important; }
+
+      #maskCanvas {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        z-index: 30;
+        pointer-events: none;
+      }
+
+      #maskLabHud {
+        position: absolute;
+        top: calc(env(safe-area-inset-top, 0px) + 10px);
+        left: 10px;
+        z-index: 100020;
+        width: min(318px, calc(100vw - 20px));
+        padding: 10px 12px;
+        border-radius: 10px;
+        background: rgba(4, 8, 14, .78);
+        color: #fff;
+        font: 700 12px/1.4 Arial, sans-serif;
+        pointer-events: none;
+        backdrop-filter: blur(8px);
+      }
+
+      #maskLabHud .lab-title {
+        margin: 0 0 6px;
+        font-size: 12px;
+        letter-spacing: .06em;
+      }
+
+      #maskLabHud dl {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 3px 8px;
+        margin: 0;
+      }
+
+      #maskLabHud dt { opacity: .62; }
+      #maskLabHud dd { margin: 0; text-align: right; }
+
+      #maskHint {
+        margin: 8px 0 0;
+        padding-top: 7px;
+        border-top: 1px solid rgba(255,255,255,.18);
+        font-weight: 600;
+        opacity: .92;
+      }
+
+      .mask-action {
+        position: absolute;
+        z-index: 100030;
+        min-height: 48px;
+        border: 1px solid rgba(255,255,255,.42);
+        border-radius: 999px;
+        padding: 0 18px;
+        background: rgba(5, 10, 17, .82);
+        color: #fff;
+        font: 800 12px/1 Arial, sans-serif;
+        letter-spacing: .04em;
+        backdrop-filter: blur(8px);
+      }
+
+      #maskReadyButton {
+        left: 50%;
+        bottom: calc(env(safe-area-inset-bottom, 0px) + 18px);
+        transform: translateX(-50%);
+        background: rgba(0, 133, 164, .90);
+        min-width: 190px;
+      }
+
+      #maskPhotoButton {
+        left: 12px;
+        bottom: calc(env(safe-area-inset-bottom, 0px) + 18px);
+      }
+
+      #maskResetButton {
+        right: 12px;
+        bottom: calc(env(safe-area-inset-bottom, 0px) + 18px);
+      }
+
+      #trackingHud {
+        top: auto !important;
+        bottom: calc(env(safe-area-inset-bottom, 0px) + 78px) !important;
+        left: 50% !important;
+        transform: translateX(-50%);
+        z-index: 100010 !important;
+        white-space: nowrap;
+      }
+
+      body[data-status="idle"] #maskLabHud,
+      body[data-status="requesting"] #maskLabHud,
+      body[data-status="idle"] .mask-action,
+      body[data-status="requesting"] .mask-action {
+        display: none !important;
+      }
     </style>
     <script src="camera.js?v=11.2" defer></script>
     <script type="importmap">
       {
         "imports": {
-          "./wrist-watch.js?v=11.2": "./wrist-watch-axis-calibrated.js?v=axis.1",
-          "./wrist-watch.js?v=ar02.2": "./wrist-watch.js?v=ar03.1-base",
+          "./wrist-watch.js?v=11.2": "./wrist-watch-mask-lab.js?v=mask.1",
           "./wrist-stabilizer.js?v=11.2": "./wrist-stabilizer.js?v=11.3.0",
           "./tuner.js?v=11.2": "./tuner.js?v=11.3.0",
           "./wrist-frame.js?v=11.2": "./wrist-frame.js?v=11.3.0",
@@ -50,13 +140,11 @@
         }
       }
     </script>
-    <script src="watch-x-control.js?v=ar04pivot.1" type="module"></script>
-    <script src="wrist-mode-control.js?v=ar03.4" type="module"></script>
-    <script src="hand-tracking.js?v=ar04axis.1" type="module"></script>
+    <script src="hand-tracking.js?v=masklab.1" type="module"></script>
+    <script src="forearm-mask-lab.js?v=masklab.1" type="module"></script>
   </head>
-  <body data-status="idle" data-facing="environment" data-tracking="idle" data-calibrating="true">
+  <body data-status="idle" data-facing="environment" data-tracking="idle">
     <main class="camera-lab">
-      <div id="ar04Marker">AR-04 · CALIBRACIÓN EJE</div>
       <video
         id="cameraVideo"
         class="camera-video"
@@ -66,21 +154,14 @@
         aria-label="Vista en directo de la cámara"
       ></video>
       <div class="camera-shade" aria-hidden="true"></div>
-      <canvas
-        id="threeCanvas"
-        class="three-canvas"
-        aria-hidden="true"
-      ></canvas>
-      <canvas
-        id="trackingCanvas"
-        class="tracking-canvas"
-        aria-hidden="true"
-      ></canvas>
+      <canvas id="threeCanvas" class="three-canvas" aria-hidden="true"></canvas>
+      <canvas id="maskCanvas" aria-hidden="true"></canvas>
+      <canvas id="trackingCanvas" class="tracking-canvas" aria-hidden="true"></canvas>
 
       <header class="topbar" style="display:none !important">
         <div>
           <p class="brand">AMURA</p>
-          <p class="phase">AR-04 · EJE REAL</p>
+          <p class="phase">LAB · MÁSCARA ANTEBRAZO</p>
         </div>
         <div class="status-pill" role="status" aria-live="polite">
           <span class="status-dot" aria-hidden="true"></span>
@@ -93,20 +174,14 @@
         <span id="trackingLabel">MEDIAPIPE EN ESPERA</span>
       </div>
 
-      <div class="axis-legend" aria-label="Convención de ejes del reloj" style="display:none !important">
-        <span class="axis-chip axis-x">+X <small>9→3</small></span>
-        <span class="axis-chip axis-y">+Y <small>6→12</small></span>
-        <span class="axis-chip axis-z">+Z <small>ESFERA→CRISTAL</small></span>
-      </div>
-
       <section id="startPanel" class="start-card" aria-labelledby="cameraTitle">
-        <p class="eyebrow">PRUEBA DE MUÑECA</p>
-        <h1 id="cameraTitle">AR-04 · EJE REAL</h1>
+        <p class="eyebrow">LABORATORIO</p>
+        <h1 id="cameraTitle">MÁSCARA DE ANTEBRAZO</h1>
         <p id="statusMessage" class="lead">
-          Pon la muñeca de frente, ciñe las líneas azules al antebrazo y pulsa LISTO. Después el corredor se apaga por completo.
+          Pon el antebrazo sobre un fondo distinto de la piel. MediaPipe queda visible solo como guía de distancia.
         </p>
         <p class="privacy">
-          Las líneas fijan el centro del antebrazo. MediaPipe Hands mueve el reloj después de calibrar.
+          Al pulsar LISTO aprendemos el color del antebrazo. Después medimos centro y anchura crudos, sin filtro y sin reloj.
         </p>
         <p id="installHint" class="install-hint">
           SIN BARRAS EN IPHONE/IPAD: COMPARTIR → AÑADIR A PANTALLA DE INICIO
@@ -121,57 +196,43 @@
         <p>Esperando permiso de cámara…</p>
       </section>
 
+      <aside id="maskLabHud" aria-label="Datos crudos de máscara">
+        <p class="lab-title">LAB · MÁSCARA ANTEBRAZO</p>
+        <dl>
+          <dt>ESTADO</dt><dd id="maskStateValue">BUSCANDO MANO</dd>
+          <dt>CENTRO X/Y</dt><dd id="maskCenterValue">—</dd>
+          <dt>ANCHO</dt><dd id="maskWidthValue">—</dd>
+          <dt>Δ FRAME</dt><dd id="maskDeltaValue">—</dd>
+          <dt>GIRO MP</dt><dd id="maskRollValue">—</dd>
+          <dt>COBERTURA</dt><dd id="maskCoverageValue">—</dd>
+        </dl>
+        <p id="maskHint">Coloca el antebrazo sobre un fondo distinto de la piel. Cuando MediaPipe lo vea bien, pulsa LISTO.</p>
+      </aside>
+
+      <button id="maskReadyButton" class="mask-action" type="button">LISTO · APRENDER BRAZO</button>
+      <button id="maskPhotoButton" class="mask-action" type="button" hidden>FOTO</button>
+      <button id="maskResetButton" class="mask-action" type="button" hidden>REPETIR</button>
+
       <aside id="diagnosticsPanel" class="diagnostics" aria-label="Diagnóstico de cámara" hidden style="display:none !important">
         <div class="diagnostics-heading">
-          <div>
-            <p class="eyebrow">DIAGNÓSTICO</p>
-            <h2>Comparador de giro</h2>
-          </div>
+          <div><p class="eyebrow">DIAGNÓSTICO</p><h2>Datos</h2></div>
           <button id="closeDiagnosticsButton" class="icon-button" type="button" aria-label="Cerrar diagnóstico">×</button>
         </div>
         <dl id="diagnosticsList"></dl>
       </aside>
 
-      <div class="rotation-modes" role="group" aria-label="Método de giro de muñeca" style="display:none !important">
-        <button class="rotation-mode" type="button" data-rotation-mode="world" aria-pressed="false">WORLD</button>
-        <button class="rotation-mode active" type="button" data-rotation-mode="image" aria-pressed="true">IMAGE 3D</button>
-        <button class="rotation-mode" type="button" data-rotation-mode="hybrid" aria-pressed="false">HÍBRIDO</button>
-      </div>
-
-      <nav class="controls" aria-label="Controles AR-04">
-        <button id="diagnosticsButton" class="control-button" type="button" aria-pressed="false" style="display:none !important">
-          <span class="control-label">DIAG</span>
-          <span id="fpsValue" class="control-value">DATOS</span>
+      <nav class="controls" aria-label="Controles técnicos ocultos">
+        <button id="diagnosticsButton" class="control-button" type="button" aria-pressed="false">
+          <span class="control-label">DIAG</span><span id="fpsValue" class="control-value">DATOS</span>
         </button>
-
-        <button id="guidesButton" class="control-button primary-control" type="button" aria-pressed="true">
-          <span class="control-label">GUÍAS</span>
-          <span id="guidesValue" class="control-value">OCULTAR</span>
+        <button id="guidesButton" class="control-button" type="button" aria-pressed="true">
+          <span class="control-label">GUÍAS</span><span id="guidesValue" class="control-value">OCULTAR</span>
         </button>
-
-        <button id="forearmEdgeButton" class="control-button primary-control" type="button" aria-pressed="true">
-          <span class="control-label">BORDE</span>
-          <span id="forearmEdgeValue" class="control-value">OCULTAR</span>
+        <button id="switchCameraButton" class="control-button" type="button" hidden>
+          <span class="control-label">CÁMARA</span><span id="switchCameraValue" class="control-value">FRONTAL</span>
         </button>
-
-        <button id="wristModeButton" class="control-button primary-control" type="button" aria-pressed="true">
-          <span class="control-label">MUÑECA</span>
-          <span id="wristModeValue" class="control-value">TRANSPARENTE</span>
-        </button>
-
-        <button id="watchXButton" class="control-button primary-control" type="button" aria-pressed="true" aria-label="Reloj visible en X menos 24 milímetros">
-          <span class="control-label">X RELOJ</span>
-          <span id="watchXValue" class="control-value">−24 mm</span>
-        </button>
-
-        <button id="switchCameraButton" class="control-button primary-control" type="button" hidden style="display:none !important">
-          <span class="control-label">CÁMARA</span>
-          <span id="switchCameraValue" class="control-value">FRONTAL</span>
-        </button>
-
-        <button id="stopButton" class="control-button" type="button" hidden style="display:none !important">
-          <span class="control-label">SESIÓN</span>
-          <span class="control-value">DETENER</span>
+        <button id="stopButton" class="control-button" type="button" hidden>
+          <span class="control-label">SESIÓN</span><span class="control-value">DETENER</span>
         </button>
       </nav>
     </main>
