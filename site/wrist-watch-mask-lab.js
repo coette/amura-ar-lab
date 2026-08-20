@@ -1,17 +1,15 @@
-import "./mask-10s-lab.js?v=measure.1";
-import "./axis-p0-stable-lab.js?v=axisstable.2";
-import "./mask-photo-share.js?v=share.1";
-import "./mask-state-compat.js?v=axis.1";
+import "./axis-r07-lab.js?v=r07.1";
+import "./mask-photo-share.js?v=share.2";
 
 const LAB_STATE = {
   status: "listo",
-  revision: "MASK-LAB",
+  revision: "R07-EJE-NUBE",
   visible: false,
   depthMm: 0,
   palmWidthMm: 0,
   reprojectionErrorPx: 0,
   contact: "—",
-  asset: "sin reloj · laboratorio máscara"
+  asset: "sin reloj · R07 eje nube"
 };
 
 export function updateWristWatch() {
