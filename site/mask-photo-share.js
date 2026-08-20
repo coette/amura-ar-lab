@@ -1,16 +1,9 @@
-// AMURA AR · salida nativa de la foto del laboratorio de máscara en iPhone/iPad.
-// Recupera el flujo validado anteriormente: PNG -> hoja nativa Compartir -> Guardar imagen.
+// AMURA AR · R07 · salida nativa de foto en iPhone/iPad.
+// La foto guardada refleja exactamente este experimento: nube + eje R07 + resultados R07.
 
 const video = document.getElementById("cameraVideo");
 const maskCanvas = document.getElementById("maskCanvas");
-const trackingCanvas = document.getElementById("trackingCanvas");
 const photoButton = document.getElementById("maskPhotoButton");
-const stateValue = document.getElementById("maskStateValue");
-const centerValue = document.getElementById("maskCenterValue");
-const widthValue = document.getElementById("maskWidthValue");
-const deltaValue = document.getElementById("maskDeltaValue");
-const rollValue = document.getElementById("maskRollValue");
-const coverageValue = document.getElementById("maskCoverageValue");
 const hint = document.getElementById("maskHint");
 
 if (photoButton) photoButton.textContent = "GUARDAR FOTO";
@@ -22,7 +15,7 @@ function canvasToBlob(canvas) {
 function filename() {
   const now = new Date();
   const pad = (value) => String(value).padStart(2, "0");
-  return `AMURA_MASK_${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}_${pad(now.getHours())}-${pad(now.getMinutes())}-${pad(now.getSeconds())}.png`;
+  return `AMURA_R07_EJE_NUBE_${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}_${pad(now.getHours())}-${pad(now.getMinutes())}-${pad(now.getSeconds())}.png`;
 }
 
 function fallbackDownload(blob, name) {
@@ -38,20 +31,18 @@ function fallbackDownload(blob, name) {
 }
 
 function currentTextLines() {
-  const lines = [
-    "AMURA · LAB MÁSCARA ANTEBRAZO",
-    "ESTADO: " + (stateValue?.textContent || "—"),
-    "CENTRO X/Y: " + (centerValue?.textContent || "—"),
-    "ANCHO: " + (widthValue?.textContent || "—"),
-    "Δ FRAME: " + (deltaValue?.textContent || "—"),
-    "GIRO MEDIAPIPE: " + (rollValue?.textContent || "—"),
-    "COBERTURA: " + (coverageValue?.textContent || "—"),
-    "MÁSCARA: CRUDA / SIN FILTRO"
-  ];
-
-  const measureValue = document.getElementById("maskMeasureValue");
-  const measurement = String(measureValue?.textContent || "").trim();
-  if (measurement) lines.push(...measurement.split(/\n+/));
+  const lines = ["LAB · EJE NUBE · R07"];
+  const result = window.AmuraR07MeasureResult;
+  if (result) {
+    lines.push(
+      `PUNTO EJE · rango ${result.total.pointRange.toFixed(1)} px`,
+      `ÁNGULO EJE · rango ${result.total.angleRange.toFixed(2)}°`,
+      `0–5 s · punto ${result.first.pointRange.toFixed(1)} px · ángulo ${result.first.angleRange.toFixed(2)}°`,
+      `5–10 s · punto ${result.second.pointRange.toFixed(1)} px · ángulo ${result.second.angleRange.toFixed(2)}°`
+    );
+  } else {
+    lines.push("SIN MEDICIÓN 10 s");
+  }
   return lines;
 }
 
@@ -66,9 +57,6 @@ function drawComposite() {
 
   if (maskCanvas?.width && maskCanvas?.height) {
     context.drawImage(maskCanvas, 0, 0, output.width, output.height);
-  }
-  if (trackingCanvas?.width && trackingCanvas?.height) {
-    context.drawImage(trackingCanvas, 0, 0, output.width, output.height);
   }
 
   const lines = currentTextLines();
@@ -126,7 +114,6 @@ async function sharePhoto() {
   }
 }
 
-// Interceptamos antes del listener antiguo, que descargaba el JPG directamente.
 document.addEventListener("click", (event) => {
   const target = event.target instanceof Element ? event.target.closest("#maskPhotoButton") : null;
   if (!target) return;
@@ -137,9 +124,5 @@ document.addEventListener("click", (event) => {
 }, true);
 
 window.setInterval(() => {
-  if (!photoButton) return;
-  photoButton.textContent = "GUARDAR FOTO";
-  if (window.AmuraMaskMeasureResult && hint?.textContent.includes("Pulsa FOTO")) {
-    hint.textContent = "Medición terminada. Pulsa GUARDAR FOTO y después Guardar imagen en el iPhone.";
-  }
+  if (photoButton) photoButton.textContent = "GUARDAR FOTO";
 }, 250);
