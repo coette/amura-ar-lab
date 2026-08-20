@@ -1,4 +1,5 @@
-import "./static-bank-player.js?v=r13.1";
+import "./static-bank-player.js?v=r13.2";
+import "./static-bank-base64-loader.js?v=r13.1";
 import "./axis-r12-bank.js?v=r12bank.1";
 
 const LAB_STATE = {
