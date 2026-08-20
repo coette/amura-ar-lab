@@ -1,5 +1,6 @@
 import "./mask-10s-lab.js?v=measure.1";
 import "./mask-photo-share.js?v=share.1";
+import "./mask-state-compat.js?v=axis.1";
 
 const LAB_STATE = {
   status: "listo",
