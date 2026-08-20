@@ -20,6 +20,7 @@ let targetIndex = 0;
 let busy = false;
 let results = [];
 let lastCapturedIndex = -1;
+let runToken = 0;
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -80,6 +81,10 @@ function measureSample(objectiveDeg, burstIndex) {
     axisState: axis ? "VIVO" : "PERDIDO",
     p0Xpx: null,
     p0Ypx: null,
+    axisStartXpx: axis ? axis.start.x : null,
+    axisStartYpx: axis ? axis.start.y : null,
+    axisEndXpx: axis ? axis.end.x : null,
+    axisEndYpx: axis ? axis.end.y : null,
     axisMidXpx: axis ? axis.midpoint.x : null,
     axisMidYpx: axis ? axis.midpoint.y : null,
     axisAngleDeg: axis && Number.isFinite(axis.angleDeg) ? axis.angleDeg : null,
@@ -89,9 +94,13 @@ function measureSample(objectiveDeg, burstIndex) {
     maskHeight: height
   };
 
+  if (p0 && width && height) {
+    sample.p0Xpx = p0.x * width;
+    sample.p0Ypx = p0.y * height;
+  }
+
   if (!axis || !p0 || !width || !height) return sample;
 
-  const p0px = { x: p0.x * width, y: p0.y * height };
   const dx = axis.end.x - axis.start.x;
   const dy = axis.end.y - axis.start.y;
   const length = Math.hypot(dx, dy);
@@ -101,11 +110,9 @@ function measureSample(objectiveDeg, burstIndex) {
   const uy = dy / length;
   const px = -uy;
   const py = ux;
-  const rx = p0px.x - axis.midpoint.x;
-  const ry = p0px.y - axis.midpoint.y;
+  const rx = sample.p0Xpx - axis.midpoint.x;
+  const ry = sample.p0Ypx - axis.midpoint.y;
 
-  sample.p0Xpx = p0px.x;
-  sample.p0Ypx = p0px.y;
   sample.perpendicularPx = rx * px + ry * py;
   sample.longitudinalPx = rx * ux + ry * uy;
   return sample;
@@ -126,22 +133,40 @@ function captureThumbnail(sample) {
     context.drawImage(trackingCanvas, 0, 0, output.width, output.height);
   }
 
-  if (sample && sample.p0State === "VIVO" && Number.isFinite(sample.p0Xpx) && Number.isFinite(sample.p0Ypx)) {
-    const x = sample.p0Xpx / sample.maskWidth * output.width;
-    const y = sample.p0Ypx / sample.maskHeight * output.height;
-    context.save();
-    context.strokeStyle = "rgba(255,215,0,.98)";
-    context.lineWidth = 4;
-    context.beginPath();
-    context.arc(x, y, 10, 0, Math.PI * 2);
-    context.stroke();
-    context.beginPath();
-    context.moveTo(x - 14, y);
-    context.lineTo(x + 14, y);
-    context.moveTo(x, y - 14);
-    context.lineTo(x, y + 14);
-    context.stroke();
-    context.restore();
+  if (sample && sample.maskWidth && sample.maskHeight) {
+    const sx = output.width / sample.maskWidth;
+    const sy = output.height / sample.maskHeight;
+
+    // Redibuja explícitamente el eje medido para que nunca falte por un refresco del canvas.
+    if (sample.axisState === "VIVO" && Number.isFinite(sample.axisStartXpx) && Number.isFinite(sample.axisEndXpx)) {
+      context.save();
+      context.strokeStyle = "rgba(255,255,255,.99)";
+      context.lineWidth = 4;
+      context.beginPath();
+      context.moveTo(sample.axisStartXpx * sx, sample.axisStartYpx * sy);
+      context.lineTo(sample.axisEndXpx * sx, sample.axisEndYpx * sy);
+      context.stroke();
+      context.restore();
+    }
+
+    // Marca diagnóstica de P0 solamente en la copia guardada. No interviene en tracking.
+    if (sample.p0State === "VIVO" && Number.isFinite(sample.p0Xpx) && Number.isFinite(sample.p0Ypx)) {
+      const x = sample.p0Xpx * sx;
+      const y = sample.p0Ypx * sy;
+      context.save();
+      context.strokeStyle = "rgba(255,215,0,.98)";
+      context.lineWidth = 4;
+      context.beginPath();
+      context.arc(x, y, 10, 0, Math.PI * 2);
+      context.stroke();
+      context.beginPath();
+      context.moveTo(x - 14, y);
+      context.lineTo(x + 14, y);
+      context.moveTo(x, y - 14);
+      context.lineTo(x, y + 14);
+      context.stroke();
+      context.restore();
+    }
   }
   return output;
 }
@@ -307,6 +332,7 @@ async function captureBurst() {
     return;
   }
 
+  const token = ++runToken;
   busy = true;
   syncUi();
   const objectiveDeg = TARGETS[targetIndex];
@@ -317,6 +343,7 @@ async function captureBurst() {
     setCountdown(value);
     setStatus("NO MUEVAS LA MUÑECA");
     await sleep(COUNTDOWN_MS);
+    if (token !== runToken) return;
   }
   setCountdown("FOTO");
 
@@ -327,9 +354,13 @@ async function captureBurst() {
     samples.push(sample);
     if (i === 1) thumbnail = captureThumbnail(sample);
     setStatus(`CAPTURANDO ${i + 1}/3`);
-    if (i < BURST_COUNT - 1) await sleep(BURST_GAP_MS);
+    if (i < BURST_COUNT - 1) {
+      await sleep(BURST_GAP_MS);
+      if (token !== runToken) return;
+    }
   }
   await sleep(260);
+  if (token !== runToken) return;
   setCountdown(null);
 
   const existingIndex = results.findIndex((item) => item.targetIndex === targetIndex);
@@ -365,16 +396,18 @@ function csvEscape(value) {
 function buildCsv() {
   const headers = [
     "position_index", "objective_deg", "burst_sample", "captured_at", "mp_angle_deg",
-    "p0_state", "axis_state", "p0_x_px", "p0_y_px", "axis_mid_x_px", "axis_mid_y_px",
-    "axis_angle_deg", "perpendicular_px_signed", "longitudinal_px", "mask_width", "mask_height"
+    "p0_state", "axis_state", "p0_x_px", "p0_y_px", "axis_start_x_px", "axis_start_y_px",
+    "axis_end_x_px", "axis_end_y_px", "axis_mid_x_px", "axis_mid_y_px", "axis_angle_deg",
+    "perpendicular_px_signed", "longitudinal_px", "mask_width", "mask_height"
   ];
   const rows = [headers.join(",")];
   results.forEach((result) => {
     result.samples.forEach((sample) => {
       const values = [
         result.targetIndex + 1, result.objectiveDeg, sample.burstIndex, sample.capturedAt, sample.mpAngleDeg,
-        sample.p0State, sample.axisState, sample.p0Xpx, sample.p0Ypx, sample.axisMidXpx, sample.axisMidYpx,
-        sample.axisAngleDeg, sample.perpendicularPx, sample.longitudinalPx, sample.maskWidth, sample.maskHeight
+        sample.p0State, sample.axisState, sample.p0Xpx, sample.p0Ypx, sample.axisStartXpx, sample.axisStartYpx,
+        sample.axisEndXpx, sample.axisEndYpx, sample.axisMidXpx, sample.axisMidYpx, sample.axisAngleDeg,
+        sample.perpendicularPx, sample.longitudinalPx, sample.maskWidth, sample.maskHeight
       ];
       rows.push(values.map(csvEscape).join(","));
     });
@@ -502,6 +535,7 @@ async function exportResults() {
 }
 
 function resetR11() {
+  runToken += 1;
   busy = false;
   targetIndex = 0;
   results = [];
