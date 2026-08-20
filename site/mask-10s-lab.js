@@ -1,3 +1,60 @@
+function ensureMeasureUi() {
+  if (!document.getElementById("maskMeasureLabStyle")) {
+    const style = document.createElement("style");
+    style.id = "maskMeasureLabStyle";
+    style.textContent = `
+      #maskMeasureButton {
+        left: 50%;
+        bottom: calc(env(safe-area-inset-bottom, 0px) + 18px);
+        transform: translateX(-50%);
+        min-width: 150px;
+        background: rgba(126, 74, 220, .90);
+      }
+      #maskMeasureButton:disabled { opacity: .82; }
+      #maskMeasurePanel {
+        position: absolute;
+        top: calc(env(safe-area-inset-top, 0px) + 190px);
+        left: 10px;
+        z-index: 100025;
+        width: min(350px, calc(100vw - 20px));
+        padding: 9px 11px;
+        border-radius: 10px;
+        background: rgba(4, 8, 14, .82);
+        color: #fff;
+        font: 700 11px/1.38 Arial, sans-serif;
+        white-space: pre-line;
+        pointer-events: none;
+        backdrop-filter: blur(8px);
+      }
+      #maskMeasurePanel[hidden] { display: none !important; }
+    `;
+    document.head.appendChild(style);
+  }
+
+  const lab = document.querySelector(".camera-lab") || document.body;
+  if (!document.getElementById("maskMeasureButton")) {
+    const button = document.createElement("button");
+    button.id = "maskMeasureButton";
+    button.className = "mask-action";
+    button.type = "button";
+    button.hidden = true;
+    button.textContent = "MEDIR 10 s";
+    lab.appendChild(button);
+  }
+
+  if (!document.getElementById("maskMeasurePanel")) {
+    const panel = document.createElement("aside");
+    panel.id = "maskMeasurePanel";
+    panel.hidden = true;
+    const value = document.createElement("div");
+    value.id = "maskMeasureValue";
+    panel.appendChild(value);
+    lab.appendChild(panel);
+  }
+}
+
+ensureMeasureUi();
+
 const video = document.getElementById("cameraVideo");
 const maskCanvas = document.getElementById("maskCanvas");
 const trackingCanvas = document.getElementById("trackingCanvas");
@@ -126,7 +183,7 @@ function renderResult(result) {
 }
 
 function syncVisibility() {
-  if (!measureButton || !readyButton) return;
+  if (!measureButton || !readyButton || !resetButton) return;
   const calibrated = readyButton.hidden && !resetButton.hidden;
   measureButton.hidden = !calibrated;
   if (!calibrated && !measuring) {
@@ -160,6 +217,7 @@ function startMeasurement() {
   const samples = [];
   const startedAt = performance.now();
   measureButton.disabled = true;
+  hint.textContent = "Mantén el antebrazo completamente quieto durante 10 segundos.";
 
   const sample = () => {
     const metrics = readMetrics();
