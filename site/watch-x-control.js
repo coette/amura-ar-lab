@@ -1,6 +1,6 @@
 import { tuning } from "./tuner.js?v=11.2";
 
-// AR-03 · un único control para comparar colocación y ocultar el reloj.
+// AR-03/04 · control mínimo de posición X del reloj.
 // P0, tríada y muñeca virtual no se mueven nunca.
 const STORAGE_KEY = "amura.tuning.v112";
 const ZERO_X_MM = 0;
@@ -11,8 +11,9 @@ const STATES = [
   { x: FIT_X_MM, visible: 0, label: "OCULTO" }
 ];
 
-let stateIndex = 0;
-window.AmuraWatchPlacementXmm = ZERO_X_MM;
+// AR-04 parte de la colocación ya validada de −24 mm.
+let stateIndex = 1;
+window.AmuraWatchPlacementXmm = FIT_X_MM;
 
 const button = document.getElementById("watchXButton");
 const value = document.getElementById("watchXValue");
@@ -52,8 +53,6 @@ function applyState() {
   }
 }
 
-// Cada carga empieza limpia: reloj visible en P0/X=0.
-stateIndex = 0;
 applyState();
 
 if (button) {
