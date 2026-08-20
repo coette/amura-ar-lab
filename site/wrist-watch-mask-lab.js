@@ -1,4 +1,5 @@
 import "./static-bank-player-r16.js?v=r16.1";
+import "./r16-bank-fix.js?v=r16.1";
 import "./axis-r16-live.js?v=r16.1";
 
 const LAB_STATE = {
