@@ -1,11 +1,11 @@
 import "./mask-10s-lab.js?v=measure.1";
-import "./axis-p0-stable-lab.js?v=axisstable.2";
+import "./axis-p0-stable-lab.js?v=axisstable.3";
 import "./mask-photo-share.js?v=share.1";
 import "./mask-state-compat.js?v=axis.1";
 
 const LAB_STATE = {
   status: "listo",
-  revision: "MASK-LAB",
+  revision: "R07-CLOUD-ANCHOR",
   visible: false,
   depthMm: 0,
   palmWidthMm: 0,
