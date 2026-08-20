@@ -53,14 +53,8 @@
       <canvas id="threeCanvas" class="three-canvas" aria-hidden="true"></canvas>
       <canvas id="maskCanvas" aria-hidden="true"></canvas>
       <canvas id="trackingCanvas" class="tracking-canvas" aria-hidden="true"></canvas>
-
-      <header class="topbar" style="display:none !important">
-        <div><p class="brand">AMURA</p><p class="phase">LAB · FINAL CHAIN A/B · R15</p></div>
-        <div class="status-pill" role="status" aria-live="polite"><span class="status-dot" aria-hidden="true"></span><span id="statusLabel">EN ESPERA</span></div>
-      </header>
-
+      <header class="topbar" style="display:none !important"><div><p class="brand">AMURA</p><p class="phase">LAB · FINAL CHAIN A/B · R15</p></div><div class="status-pill" role="status" aria-live="polite"><span class="status-dot" aria-hidden="true"></span><span id="statusLabel">EN ESPERA</span></div></header>
       <div id="trackingHud" class="tracking-hud" role="status" aria-live="polite" hidden><span class="tracking-dot" aria-hidden="true"></span><span id="trackingLabel">MEDIAPIPE EN ESPERA</span></div>
-
       <section id="startPanel" class="start-card" aria-labelledby="cameraTitle">
         <p class="eyebrow">LABORATORIO · R15</p>
         <h1 id="cameraTitle">FINAL ACTUAL VS FINAL NUEVO</h1>
@@ -69,37 +63,17 @@
         <p id="installHint" class="install-hint">SIN BARRAS EN IPHONE/IPAD: COMPARTIR → AÑADIR A PANTALLA DE INICIO</p>
         <button id="startButton" class="primary-button" type="button">Abrir cámara trasera</button>
       </section>
-
       <section id="requestPanel" class="requesting" role="status" aria-live="polite" hidden><span class="spinner" aria-hidden="true"></span><p>Esperando permiso de cámara…</p></section>
-
       <aside id="maskLabHud" aria-label="Datos internos de máscara">
         <p class="lab-title">LAB INTERNO</p>
-        <dl>
-          <dt>ESTADO</dt><dd id="maskStateValue">BUSCANDO P0</dd>
-          <dt>CENTRO X/Y</dt><dd id="maskCenterValue">—</dd>
-          <dt>ANCHO</dt><dd id="maskWidthValue">—</dd>
-          <dt>Δ FRAME</dt><dd id="maskDeltaValue">—</dd>
-          <dt>GIRO MP</dt><dd id="maskRollValue">—</dd>
-          <dt>COBERTURA</dt><dd id="maskCoverageValue">—</dd>
-        </dl>
+        <dl><dt>ESTADO</dt><dd id="maskStateValue">BUSCANDO P0</dd><dt>CENTRO X/Y</dt><dd id="maskCenterValue">—</dd><dt>ANCHO</dt><dd id="maskWidthValue">—</dd><dt>Δ FRAME</dt><dd id="maskDeltaValue">—</dd><dt>GIRO MP</dt><dd id="maskRollValue">—</dd><dt>COBERTURA</dt><dd id="maskCoverageValue">—</dd></dl>
         <p id="maskHint">Datos internos del laboratorio.</p>
       </aside>
-
       <button id="maskReadyButton" class="mask-action" type="button">LISTO · APRENDER BRAZO</button>
       <button id="maskPhotoButton" class="mask-action" type="button" hidden>FOTO</button>
       <button id="maskResetButton" class="mask-action" type="button" hidden>REPETIR</button>
-
-      <aside id="diagnosticsPanel" class="diagnostics" aria-label="Diagnóstico de cámara" hidden style="display:none !important">
-        <div class="diagnostics-heading"><div><p class="eyebrow">DIAGNNÓSTICO</p><h2>Datos</h2></div><button id="closeDiagnosticsButton" class="icon-button" type="button" aria-label="Cerrar diagnóstico">×</button></div>
-        <dl id="diagnosticsList"></dl>
-      </aside>
-
-      <nav class="controls" aria-label="Controles técnicos ocultos">
-        <button id="diagnosticsButton" class="control-button" type="button" aria-pressed="false"><span class="control-label">DIAG</span><span id="fpsValue" class="control-value">DATOS</span></button>
-        <button id="guidesButton" class="control-button" type="button" aria-pressed="true"><span class="control-label">GUÍAS</span><span id="guidesValue" class="control-value">OCULTAR</span></button>
-        <button id="switchCameraButton" class="control-button" type="button" hidden><span class="control-label">CÁMARA</span><span id="switchCameraValue" class="control-value">FRONTAL</span></button>
-        <button id="stopButton" class="control-button" hidden><span class="control-label">SESIÓN</span><span class="control-value">DETENER</span></button>
-      </nav>
+      <aside id="diagnosticsPanel" class="diagnostics" aria-label="Diagnóstico de cámara" hidden style="display:none !important"><div class="diagnostics-heading"><div><p class="eyebrow">DIAGNÓSTICO</p><h2>Datos</h2></div><button id="closeDiagnosticsButton" class="icon-button" type="button" aria-label="Cerrar diagnóstico">×</button></div><dl id="diagnosticsList"></dl></aside>
+      <nav class="controls" aria-label="Controles técnicos ocultos"><button id="diagnosticsButton" class="control-button" type="button" aria-pressed="false"><span class="control-label">DIAG</span><span id="fpsValue" class="control-value">DATOS</span></button><button id="guidesButton" class="control-button" type="button" aria-pressed="true"><span class="control-label">GUÍAS</span><span id="guidesValue" class="control-value">OCULTAR</span></button><button id="switchCameraButton" class="control-button" type="button" hidden><span class="control-label">CÁMARA</span><span id="switchCameraValue" class="control-value">FRONTAL</span></button><button id="stopButton" class="control-button" hidden><span class="control-label">SESIÓN</span><span class="control-value">DETENER</span></button></nav>
     </main>
   </body>
 </html>
