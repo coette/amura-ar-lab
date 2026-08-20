@@ -1,6 +1,6 @@
 // AMURA AR · captura rápida de la vista de diagnóstico.
-// No puede invocar la captura de pantalla nativa de iOS; compone la vista de la app
-// (vídeo + canvases + HUD) y descarga un PNG con un solo toque.
+// iOS no permite a una web escribir silenciosamente en Fotos. Por eso la captura
+// se entrega a la hoja nativa de compartir como un PNG listo para "Guardar imagen".
 
 const root = document.querySelector('.camera-lab') || document.body;
 const video = document.getElementById('cameraVideo');
@@ -32,7 +32,33 @@ Object.assign(button.style, {
 });
 root.appendChild(button);
 
+const toast = document.createElement('div');
+toast.id = 'quickCaptureToast';
+Object.assign(toast.style, {
+  position: 'fixed',
+  left: '86px',
+  bottom: 'calc(env(safe-area-inset-bottom, 0px) + 24px)',
+  zIndex: '100500',
+  padding: '8px 10px',
+  borderRadius: '9px',
+  background: 'rgba(0,0,0,.82)',
+  color: '#fff',
+  font: '700 12px/1.2 Arial, sans-serif',
+  opacity: '0',
+  pointerEvents: 'none',
+  transition: 'opacity .15s ease'
+});
+root.appendChild(toast);
+
 let captureCount = 0;
+let toastTimer = null;
+
+function showToast(text) {
+  toast.textContent = text;
+  toast.style.opacity = '1';
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { toast.style.opacity = '0'; }, 1600);
+}
 
 function visible(element) {
   if (!element) return false;
@@ -135,52 +161,93 @@ function filename() {
   return `AMURA_AR_${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}_${pad(now.getHours())}-${pad(now.getMinutes())}-${pad(now.getSeconds())}.png`;
 }
 
-function capture() {
-  if (!video || video.readyState < 2) return;
+function canvasToBlob(canvas) {
+  return new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
+}
 
-  const dpr = Math.min(2, window.devicePixelRatio || 1);
-  const cssWidth = Math.max(1, window.innerWidth);
-  const cssHeight = Math.max(1, window.innerHeight);
-  const canvas = document.createElement('canvas');
-  canvas.id = 'quickCaptureComposite';
-  canvas.width = Math.round(cssWidth * dpr);
-  canvas.height = Math.round(cssHeight * dpr);
-  const ctx = canvas.getContext('2d');
-
-  drawVideoCover(ctx, canvas.width, canvas.height, dpr);
-
-  // Reproduce las capas gráficas reales de la prueba, en su orden aproximado.
-  document.querySelectorAll('canvas').forEach((layer) => {
-    if (layer === canvas || layer.id === 'trackingCanvas') return;
-    drawCanvasLayer(ctx, layer, dpr);
-  });
-
-  // HUD/etiquetas HTML importantes para interpretar la captura.
-  drawTextBox(ctx, document.getElementById('ar04Marker'), dpr);
-  drawTextBox(ctx, document.getElementById('p0AxisTestHud'), dpr);
-  drawTextBox(ctx, document.getElementById('trackingHud'), dpr);
-
-  const url = canvas.toDataURL('image/png');
+function fallbackDownload(blob, name) {
+  const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
-  link.download = filename();
+  link.download = name;
   link.style.display = 'none';
   document.body.appendChild(link);
   link.click();
   link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1500);
+}
 
-  captureCount += 1;
-  const count = document.getElementById('quickCaptureCount');
-  if (count) count.textContent = String(captureCount);
+async function deliverCapture(blob, name) {
+  const file = new File([blob], name, { type: 'image/png' });
+  const shareData = { files: [file] };
 
-  button.animate(
-    [
-      { transform: 'scale(1)', background: 'rgba(0,0,0,.72)' },
-      { transform: 'scale(.88)', background: 'rgba(0,229,255,.95)' },
-      { transform: 'scale(1)', background: 'rgba(0,0,0,.72)' }
-    ],
-    { duration: 220, easing: 'ease-out' }
-  );
+  if (navigator.share && (!navigator.canShare || navigator.canShare(shareData))) {
+    try {
+      showToast('Pulsa “Guardar imagen”');
+      await navigator.share(shareData);
+      return true;
+    } catch (error) {
+      if (error && error.name === 'AbortError') return false;
+      console.warn('No se pudo abrir Compartir; se usa descarga.', error);
+    }
+  }
+
+  fallbackDownload(blob, name);
+  showToast('Guardada en Descargas');
+  return true;
+}
+
+async function capture() {
+  if (!video || video.readyState < 2 || button.disabled) return;
+  button.disabled = true;
+
+  try {
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    const cssWidth = Math.max(1, window.innerWidth);
+    const cssHeight = Math.max(1, window.innerHeight);
+    const canvas = document.createElement('canvas');
+    canvas.id = 'quickCaptureComposite';
+    canvas.width = Math.round(cssWidth * dpr);
+    canvas.height = Math.round(cssHeight * dpr);
+    const ctx = canvas.getContext('2d');
+
+    drawVideoCover(ctx, canvas.width, canvas.height, dpr);
+
+    // Reproduce las capas gráficas reales de la prueba, en su orden aproximado.
+    document.querySelectorAll('canvas').forEach((layer) => {
+      if (layer === canvas || layer.id === 'trackingCanvas') return;
+      drawCanvasLayer(ctx, layer, dpr);
+    });
+
+    // HUD/etiquetas HTML importantes para interpretar la captura.
+    drawTextBox(ctx, document.getElementById('ar04Marker'), dpr);
+    drawTextBox(ctx, document.getElementById('p0AxisTestHud'), dpr);
+    drawTextBox(ctx, document.getElementById('trackingHud'), dpr);
+
+    const blob = await canvasToBlob(canvas);
+    if (!blob) {
+      showToast('No se pudo crear la imagen');
+      return;
+    }
+
+    const delivered = await deliverCapture(blob, filename());
+    if (delivered) {
+      captureCount += 1;
+      const count = document.getElementById('quickCaptureCount');
+      if (count) count.textContent = String(captureCount);
+    }
+
+    button.animate(
+      [
+        { transform: 'scale(1)', background: 'rgba(0,0,0,.72)' },
+        { transform: 'scale(.88)', background: 'rgba(0,229,255,.95)' },
+        { transform: 'scale(1)', background: 'rgba(0,0,0,.72)' }
+      ],
+      { duration: 220, easing: 'ease-out' }
+    );
+  } finally {
+    button.disabled = false;
+  }
 }
 
 button.addEventListener('click', capture);
