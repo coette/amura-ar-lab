@@ -1,196 +1,61 @@
-// AMURA AR · R13 · reproductor estático del banco base.
-// No abre cámara ni pide permisos. Las fotos están embebidas en site/test-bank/2026-08-20-banco-base/.
+import { analyzeBankImage, analysisPoint, directionAngle } from "./static-bank-analyzer.js?v=r13.1";
 
 const BANK_BASE = "./test-bank/2026-08-20-banco-base/";
+const CONNECTIONS = [[0,1],[1,2],[2,3],[3,4],[0,5],[5,6],[6,7],[7,8],[5,9],[9,10],[10,11],[11,12],[9,13],[13,14],[14,15],[15,16],[13,17],[17,18],[18,19],[19,20],[0,17]];
 const BANK = [
-  { file:"postura_01_000deg.jpg", target:0,   roi:173.9, pca:169.0, final:174.7 },
-  { file:"postura_02_030deg.jpg", target:30,  roi:171.6, pca:170.5, final:170.8 },
-  { file:"postura_03_060deg.jpg", target:60,  roi:172.2, pca:172.3, final:170.9, accumulated:true },
-  { file:"postura_04_090deg.jpg", target:90,  roi:171.3, pca:169.4, final:169.7 },
-  { file:"postura_05_135deg.jpg", target:135, roi:164.5, pca:163.4, final:168.0 },
-  { file:"postura_06_150deg.jpg", target:150, roi:162.0, pca:149.7, final:159.5 },
-  { file:"postura_07_165deg.jpg", target:165, roi:161.5, pca:151.6, final:162.4 },
-  { file:"postura_08_180deg.jpg", target:180, roi:151.7, pca:129.3, final:138.3 }
+  {file:"postura_01_000deg.jpg",target:0,live:{roi:173.94,pca:169.12,final:174.67},p0:[169.20,250.24],finalMid:[76.52,247.25]},
+  {file:"postura_02_030deg.jpg",target:30,live:{roi:171.55,pca:170.44,final:170.78},p0:[195.84,273.28],finalMid:[80.54,288.24]},
+  {file:"postura_03_060deg.jpg",target:60,live:{roi:172.21,pca:172.30,final:170.35},p0:null,finalMid:[88.42,279.01],accumulated:true},
+  {file:"postura_04_090deg.jpg",target:90,live:{roi:171.32,pca:169.36,final:169.47},p0:[127.80,288.00],finalMid:[69.59,282.98]},
+  {file:"postura_05_135deg.jpg",target:135,live:{roi:164.49,pca:163.16,final:168.42},p0:[140.04,282.88],finalMid:[69.40,287.02]},
+  {file:"postura_06_150deg.jpg",target:150,live:{roi:162.00,pca:149.71,final:159.52},p0:[148.68,271.36],finalMid:[64.11,287.46]},
+  {file:"postura_07_165deg.jpg",target:165,live:{roi:161.51,pca:150.89,final:162.38},p0:[147.24,281.60],finalMid:[65.21,297.59]},
+  {file:"postura_08_180deg.jpg",target:180,live:{roi:151.71,pca:130.07,final:138.75},p0:[120.96,277.12],finalMid:[55.89,318.66]}
 ];
 
-let bankIndex = 0;
-let bankOpen = false;
+let bankIndex=0,bankOpen=false,runToken=0,current=null;
+function fmt(v){return Number.isFinite(v)?v.toFixed(1)+"°":"—";}
+function setStatus(t){const e=document.getElementById("r13BankStatus");if(e)e.textContent=t;}
+function setBusy(v){document.getElementById("r13BankPrev")?.toggleAttribute("disabled",v);document.getElementById("r13BankNext")?.toggleAttribute("disabled",v);}
 
-function ensureBankUi() {
-  const startPanel = document.getElementById("startPanel");
-  if (!startPanel) return;
+function resetAllState(){runToken+=1;current=null;const c=document.getElementById("r13BankCanvas");if(c)c.getContext("2d")?.clearRect(0,0,c.width,c.height);setStatus("RESET TOTAL · ESTA FOTO NO HEREDA ESTADO DE LA ANTERIOR");}
 
-  if (!document.getElementById("bankStartButton")) {
-    const button = document.createElement("button");
-    button.id = "bankStartButton";
-    button.className = "primary-button";
-    button.type = "button";
-    button.textContent = "BANCO DE FOTOS";
-    button.style.marginTop = "12px";
-    button.style.background = "rgba(20,25,34,.96)";
-    button.style.color = "#fff";
-    button.style.border = "1px solid rgba(255,255,255,.32)";
-    const cameraButton = document.getElementById("startButton");
-    cameraButton?.insertAdjacentElement("afterend", button);
-    button.addEventListener("click", openBank);
-  }
-
-  if (!document.getElementById("r13BankStyle")) {
-    const style = document.createElement("style");
-    style.id = "r13BankStyle";
-    style.textContent = `
-      #r13BankRoot { position:absolute; inset:0; z-index:200000; background:#000; color:#fff; font-family:Arial,sans-serif; }
-      #r13BankRoot[hidden] { display:none !important; }
-      #r13BankImageWrap { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; overflow:hidden; }
-      #r13BankImage { max-width:100%; max-height:100%; width:auto; height:auto; object-fit:contain; display:block; }
-      #r13BankOverlay { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; }
-      #r13BankHud { position:absolute; top:calc(env(safe-area-inset-top,0px) + 10px); left:10px; right:10px; z-index:4; padding:10px 12px; border-radius:10px; background:rgba(4,8,14,.82); backdrop-filter:blur(8px); font:800 12px/1.45 Arial,sans-serif; }
-      #r13BankTitle { font-size:12px; letter-spacing:.08em; opacity:.76; }
-      #r13BankPose { margin-top:2px; font-size:24px; }
-      #r13BankValues { margin-top:5px; font-size:13px; }
-      #r13BankNote { margin-top:5px; opacity:.78; }
-      #r13BankControls { position:absolute; left:10px; right:10px; bottom:calc(env(safe-area-inset-bottom,0px) + 16px); z-index:5; display:grid; grid-template-columns:1fr 1fr; gap:10px; }
-      #r13BankControls button { min-height:50px; border-radius:999px; border:1px solid rgba(255,255,255,.35); background:rgba(5,10,17,.88); color:#fff; font:800 12px Arial,sans-serif; letter-spacing:.04em; }
-      #r13BankClose { position:absolute; right:12px; top:calc(env(safe-area-inset-top,0px) + 118px); z-index:6; min-width:82px; min-height:42px; border-radius:999px; border:1px solid rgba(255,255,255,.35); background:rgba(5,10,17,.88); color:#fff; font:800 11px Arial,sans-serif; }
-      body[data-amura-mode="bank"] #maskLabHud,
-      body[data-amura-mode="bank"] #maskReadyButton,
-      body[data-amura-mode="bank"] #maskResetButton,
-      body[data-amura-mode="bank"] #maskPhotoButton,
-      body[data-amura-mode="bank"] #r12BankHud,
-      body[data-amura-mode="bank"] #r12BankCaptureButton,
-      body[data-amura-mode="bank"] #r12BankExportButton,
-      body[data-amura-mode="bank"] #trackingCanvas,
-      body[data-amura-mode="bank"] #maskCanvas { display:none !important; }
-    `;
-    document.head.appendChild(style);
-  }
-
-  if (!document.getElementById("r13BankRoot")) {
-    const root = document.createElement("section");
-    root.id = "r13BankRoot";
-    root.hidden = true;
-    root.innerHTML = `
-      <div id="r13BankImageWrap">
-        <img id="r13BankImage" alt="Fotograma del banco de pruebas">
-        <canvas id="r13BankOverlay"></canvas>
-      </div>
-      <aside id="r13BankHud">
-        <div id="r13BankTitle">R13 · BANCO ESTÁTICO · REFERENCIA R12</div>
-        <div id="r13BankPose"></div>
-        <div id="r13BankValues"></div>
-        <div id="r13BankNote"></div>
-      </aside>
-      <button id="r13BankClose" type="button">CÁMARA</button>
-      <nav id="r13BankControls">
-        <button id="r13BankPrev" type="button">← ANTERIOR</button>
-        <button id="r13BankNext" type="button">SIGUIENTE →</button>
-      </nav>`;
-    (document.querySelector(".camera-lab") || document.body).appendChild(root);
-    document.getElementById("r13BankPrev")?.addEventListener("click", () => showBank(bankIndex - 1));
-    document.getElementById("r13BankNext")?.addEventListener("click", () => showBank(bankIndex + 1));
-    document.getElementById("r13BankClose")?.addEventListener("click", closeBank);
-    window.addEventListener("resize", drawReferenceOverlay);
-  }
+function jpeg(bytes){return bytes?.length>3&&bytes[0]===255&&bytes[1]===216&&bytes[2]===255;}
+function b64bytes(text){const bin=atob(text),out=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)out[i]=bin.charCodeAt(i);return out;}
+async function loadPhoto(file){
+  const r=await fetch(`${BANK_BASE}${file}?v=r13.4`,{cache:"no-store"});if(!r.ok)throw new Error(`foto HTTP ${r.status}`);let bytes=new Uint8Array(await r.arrayBuffer());
+  for(let depth=0;depth<4&&!jpeg(bytes);depth++){const text=new TextDecoder().decode(bytes).replace(/\s+/g,"");if(!text||!/^[A-Za-z0-9+/=]+$/.test(text))break;bytes=b64bytes(text);}
+  if(!jpeg(bytes))throw new Error("la foto guardada no contiene un JPEG válido");const url=URL.createObjectURL(new Blob([bytes],{type:"image/jpeg"}));
+  try{const image=new Image();image.decoding="async";await new Promise((ok,no)=>{image.onload=ok;image.onerror=()=>no(new Error("JPEG no decodificable"));image.src=url;});return image;}finally{setTimeout(()=>URL.revokeObjectURL(url),1000);}
 }
 
-function openBank() {
-  ensureBankUi();
-  bankOpen = true;
-  document.body.dataset.amuraMode = "bank";
-  document.getElementById("startPanel")?.setAttribute("hidden", "");
-  const root = document.getElementById("r13BankRoot");
-  if (root) root.hidden = false;
-  document.title = "AMURA · BANCO ESTÁTICO · R13";
-  showBank(bankIndex);
+function drawLine(ctx,o,d,len,color,width,dash=[]){if(!o||!d)return;ctx.save();ctx.strokeStyle=color;ctx.lineWidth=width;ctx.lineCap="round";ctx.setLineDash(dash);ctx.beginPath();ctx.moveTo(o.x,o.y);ctx.lineTo(o.x+d.x*len,o.y+d.y*len);ctx.stroke();ctx.restore();}
+function drawMp(ctx,mp,w,h){const lm=mp?.landmarks?.[0];if(!lm)return;ctx.save();ctx.strokeStyle="rgba(202,117,255,.9)";ctx.fillStyle="rgba(222,161,255,.98)";ctx.lineWidth=1.5;for(const [a,b] of CONNECTIONS){if(!lm[a]||!lm[b])continue;ctx.beginPath();ctx.moveTo(lm[a].x*w,lm[a].y*h);ctx.lineTo(lm[b].x*w,lm[b].y*h);ctx.stroke();}for(const p of lm){ctx.beginPath();ctx.arc(p.x*w,p.y*h,2.5,0,Math.PI*2);ctx.fill();}ctx.restore();}
+
+function render(){
+  if(!current)return;const {item,result}=current,canvas=document.getElementById("r13BankCanvas"),ctx=canvas.getContext("2d");canvas.width=result.width;canvas.height=result.height;ctx.putImageData(result.clean,0,0);
+  const over=document.createElement("canvas");over.width=result.width;over.height=result.height;const oc=over.getContext("2d"),id=oc.createImageData(result.width,result.height);for(let i=0;i<result.mask.length;i++)if(result.mask[i]){const j=i*4;id.data[j]=0;id.data[j+1]=229;id.data[j+2]=255;id.data[j+3]=92;}oc.putImageData(id,0,0);ctx.drawImage(over,0,0);
+  drawMp(ctx,result.mp,result.width,result.height);
+  const g=result.geometry;if(g){const corners=[analysisPoint(g,g.roiStart,-g.roiHalfWidth),analysisPoint(g,g.roiEnd,-g.roiHalfWidth),analysisPoint(g,g.roiEnd,g.roiHalfWidth),analysisPoint(g,g.roiStart,g.roiHalfWidth)];ctx.save();ctx.strokeStyle="rgba(255,210,80,.8)";ctx.lineWidth=1.5;ctx.setLineDash([6,5]);ctx.beginPath();ctx.moveTo(corners[0].x,corners[0].y);for(const p of corners.slice(1))ctx.lineTo(p.x,p.y);ctx.closePath();ctx.stroke();ctx.restore();drawLine(ctx,g.origin,g.elbow,g.roiEnd,"rgba(255,210,80,.98)",2.5);}
+  if(result.p0){ctx.save();ctx.strokeStyle="#ffd54f";ctx.lineWidth=2;ctx.beginPath();ctx.arc(result.p0.x,result.p0.y,6,0,Math.PI*2);ctx.stroke();ctx.restore();}
+  if(result.pca.geometry)drawLine(ctx,result.pca.geometry.origin,result.pca.geometry.elbow,result.pca.geometry.roiEnd,"rgba(0,229,255,.98)",3);
+  for(const [i,p] of (result.final.centers||[]).entries()){ctx.save();ctx.fillStyle=i===0?"rgba(255,255,255,.35)":"#fff";ctx.beginPath();ctx.arc(p.x,p.y,4,0,Math.PI*2);ctx.fill();ctx.restore();}
+  if(result.final.metric){ctx.save();ctx.strokeStyle="#fff";ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(result.final.metric.start.x,result.final.metric.start.y);ctx.lineTo(result.final.metric.end.x,result.final.metric.end.y);ctx.stroke();ctx.restore();}
+  const values=document.getElementById("r13BankValues");if(values)values.innerHTML=`REPROCESADO · ROI ${fmt(directionAngle(result.geometry?.elbow))} · PCA ${fmt(result.pca.angle)} · FINAL ${fmt(result.final.metric?.angle)}<br>LIVE R12 · ROI ${item.live.roi.toFixed(1)}° · PCA ${item.live.pca.toFixed(1)}° · FINAL ${item.live.final.toFixed(1)}°`;
+  const note=document.getElementById("r13BankNote");if(note)note.textContent=`MP IMAGE: ${result.mp?.landmarks?.length?"SÍ":"NO"} · P0: ${result.p0Source} · NUBE: ${result.pca.pixelCount} puntos${item.accumulated?" · 60° en vivo tenía estado acumulado":""}`;
+  setStatus("MORADO MEDIAPIPE · AMARILLO ROI/P0 · CYAN MÁSCARA/PCA · BLANCO FINAL");
 }
 
-function closeBank() {
-  bankOpen = false;
-  delete document.body.dataset.amuraMode;
-  const root = document.getElementById("r13BankRoot");
-  if (root) root.hidden = true;
-  const startPanel = document.getElementById("startPanel");
-  if (document.body.dataset.status === "idle" && startPanel) startPanel.hidden = false;
-  document.title = "AMURA · BANCO DE PRUEBAS · R13";
+function ensureUi(){
+  const start=document.getElementById("startPanel");if(!start)return;
+  if(!document.getElementById("bankStartButton")){const b=document.createElement("button");b.id="bankStartButton";b.className="primary-button";b.type="button";b.textContent="BANCO DE FOTOS";b.style.cssText="margin-top:12px;background:rgba(20,25,34,.96);color:#fff;border:1px solid rgba(255,255,255,.32)";document.getElementById("startButton")?.insertAdjacentElement("afterend",b);b.addEventListener("click",openBank);}
+  if(!document.getElementById("r13BankStyle")){const s=document.createElement("style");s.id="r13BankStyle";s.textContent=`#r13BankRoot{position:absolute;inset:0;z-index:200000;background:#000;color:#fff;font-family:Arial,sans-serif}#r13BankRoot[hidden]{display:none!important}#r13BankStage{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:160px 0 92px;box-sizing:border-box}#r13BankCanvas{display:block;max-width:100%;max-height:100%;width:auto;height:auto}#r13BankHud{position:absolute;top:calc(env(safe-area-inset-top,0px) + 10px);left:10px;right:10px;z-index:4;padding:10px 12px;border-radius:10px;background:rgba(4,8,14,.87);backdrop-filter:blur(8px);font:800 12px/1.45 Arial,sans-serif}#r13BankTitle{font-size:12px;letter-spacing:.08em;opacity:.76}#r13BankPose{margin-top:2px;font-size:24px}#r13BankValues{margin-top:5px;font-size:13px}#r13BankNote,#r13BankStatus{margin-top:5px;opacity:.8}#r13BankControls{position:absolute;left:10px;right:10px;bottom:calc(env(safe-area-inset-bottom,0px) + 16px);z-index:5;display:grid;grid-template-columns:1fr 1fr;gap:10px}#r13BankControls button,#r13BankClose{min-height:50px;border-radius:999px;border:1px solid rgba(255,255,255,.35);background:rgba(5,10,17,.9);color:#fff;font:800 12px Arial,sans-serif;letter-spacing:.04em}#r13BankControls button:disabled{opacity:.45}#r13BankClose{position:absolute;right:12px;top:calc(env(safe-area-inset-top,0px) + 122px);z-index:6;min-width:88px;min-height:42px}body[data-amura-mode="bank"] #maskLabHud,body[data-amura-mode="bank"] #maskReadyButton,body[data-amura-mode="bank"] #maskResetButton,body[data-amura-mode="bank"] #maskPhotoButton,body[data-amura-mode="bank"] #r12BankHud,body[data-amura-mode="bank"] #r12BankCaptureButton,body[data-amura-mode="bank"] #r12BankExportButton,body[data-amura-mode="bank"] #trackingCanvas,body[data-amura-mode="bank"] #maskCanvas{display:none!important}`;document.head.appendChild(s);}
+  if(!document.getElementById("r13BankRoot")){const root=document.createElement("section");root.id="r13BankRoot";root.hidden=true;root.innerHTML=`<div id="r13BankStage"><canvas id="r13BankCanvas"></canvas></div><aside id="r13BankHud"><div id="r13BankTitle">R13.1 · BANCO REAL · MEDIAPIPE IMAGE</div><div id="r13BankPose"></div><div id="r13BankValues"></div><div id="r13BankNote"></div><div id="r13BankStatus"></div></aside><button id="r13BankClose" type="button">CÁMARA</button><nav id="r13BankControls"><button id="r13BankPrev" type="button">← ANTERIOR</button><button id="r13BankNext" type="button">SIGUIENTE →</button></nav>`;(document.querySelector(".camera-lab")||document.body).appendChild(root);document.getElementById("r13BankPrev")?.addEventListener("click",()=>showBank(bankIndex-1));document.getElementById("r13BankNext")?.addEventListener("click",()=>showBank(bankIndex+1));document.getElementById("r13BankClose")?.addEventListener("click",closeBank);}
 }
 
-function showBank(index) {
-  bankIndex = (index + BANK.length) % BANK.length;
-  const item = BANK[bankIndex];
-  const img = document.getElementById("r13BankImage");
-  const pose = document.getElementById("r13BankPose");
-  const values = document.getElementById("r13BankValues");
-  const note = document.getElementById("r13BankNote");
-  if (!img || !pose || !values || !note) return;
-  pose.textContent = `POSTURA ${bankIndex + 1}/8 · ${item.target}°`;
-  values.textContent = `LIVE R12 · ROI ${item.roi.toFixed(1)}° · PCA ${item.pca.toFixed(1)}° · FINAL ${item.final.toFixed(1)}°`;
-  note.textContent = item.accumulated
-    ? "60° · captura con estado acumulado: no equivale a inicialización desde cero."
-    : "Líneas de referencia = valores capturados en vivo. La foto es la entrada fija del banco.";
-  img.onload = drawReferenceOverlay;
-  img.src = `${BANK_BASE}${item.file}?v=r13.1`;
-  document.getElementById("r13BankPrev").disabled = false;
-  document.getElementById("r13BankNext").disabled = false;
-}
-
-function drawLine(ctx, cx, cy, angleDeg, length, stroke, width) {
-  const rad = angleDeg * Math.PI / 180;
-  const dx = Math.cos(rad) * length * 0.5;
-  const dy = Math.sin(rad) * length * 0.5;
-  ctx.save();
-  ctx.strokeStyle = stroke;
-  ctx.lineWidth = width;
-  ctx.beginPath();
-  ctx.moveTo(cx - dx, cy - dy);
-  ctx.lineTo(cx + dx, cy + dy);
-  ctx.stroke();
-  ctx.restore();
-}
-
-function drawReferenceOverlay() {
-  if (!bankOpen) return;
-  const img = document.getElementById("r13BankImage");
-  const canvas = document.getElementById("r13BankOverlay");
-  const wrap = document.getElementById("r13BankImageWrap");
-  if (!img || !canvas || !wrap || !img.naturalWidth) return;
-  const rect = wrap.getBoundingClientRect();
-  canvas.width = Math.max(1, Math.round(rect.width * devicePixelRatio));
-  canvas.height = Math.max(1, Math.round(rect.height * devicePixelRatio));
-  canvas.style.width = `${rect.width}px`;
-  canvas.style.height = `${rect.height}px`;
-  const ctx = canvas.getContext("2d");
-  ctx.scale(devicePixelRatio, devicePixelRatio);
-
-  const scale = Math.min(rect.width / img.naturalWidth, rect.height / img.naturalHeight);
-  const drawW = img.naturalWidth * scale;
-  const drawH = img.naturalHeight * scale;
-  const left = (rect.width - drawW) * 0.5;
-  const top = (rect.height - drawH) * 0.5;
-  const cx = left + drawW * 0.32;
-  const cy = top + drawH * 0.49;
-  const len = drawW * 0.30;
-  const item = BANK[bankIndex];
-
-  // Referencias capturadas en vivo: ROI=amarillo, PCA=cyan, final=blanco.
-  drawLine(ctx, cx, cy, item.roi, len, "rgba(255,210,80,.95)", 3);
-  drawLine(ctx, cx, cy, item.pca, len, "rgba(0,230,255,.95)", 3);
-  drawLine(ctx, cx, cy, item.final, len, "rgba(255,255,255,.98)", 4);
-}
-
-function boot() {
-  ensureBankUi();
-  const eyebrow = document.querySelector("#startPanel .eyebrow");
-  const title = document.getElementById("cameraTitle");
-  const lead = document.getElementById("statusMessage");
-  const privacy = document.querySelector("#startPanel .privacy");
-  if (eyebrow) eyebrow.textContent = "LABORATORIO · R13";
-  if (title) title.textContent = "CÁMARA O BANCO DE FOTOS";
-  if (lead) lead.textContent = "Elige cámara para probar en vivo o banco para trabajar con las 8 fotos guardadas.";
-  if (privacy) privacy.textContent = "BANCO DE FOTOS no abre la cámara ni pide permiso. Usa el lote fijo del 20-08-2026.";
-  document.title = "AMURA · CÁMARA / BANCO · R13";
-}
-
-if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot, { once:true });
-else boot();
-
-window.AmuraStaticBank = { items:BANK, open:openBank, close:closeBank, show:showBank };
+async function showBank(index){bankIndex=(index+BANK.length)%BANK.length;const item=BANK[bankIndex];resetAllState();const token=runToken;setBusy(true);const pose=document.getElementById("r13BankPose"),values=document.getElementById("r13BankValues"),note=document.getElementById("r13BankNote");if(pose)pose.textContent=`POSTURA ${bankIndex+1}/8 · ${item.target}°`;if(values)values.textContent="CARGANDO FOTO…";if(note)note.textContent="resetAllState() antes de cada imagen · sin continuidad temporal";try{const image=await loadPhoto(item.file);if(token!==runToken)return;if(values)values.textContent="MEDIAPIPE IMAGE → MÁSCARA → PCA → FINAL…";const result=await analyzeBankImage(image,item,()=>token===runToken);if(!result||token!==runToken)return;current={item,result};render();}catch(e){console.error("R13 banco",e);if(token===runToken){if(values)values.textContent="ERROR AL REPROCESAR";setStatus(e.message);}}finally{if(token===runToken)setBusy(false);}}
+function openBank(){ensureUi();bankOpen=true;document.body.dataset.amuraMode="bank";document.getElementById("startPanel")?.setAttribute("hidden","");document.getElementById("r13BankRoot").hidden=false;document.title="AMURA · BANCO REAL · R13.1";showBank(bankIndex);}
+function closeBank(){resetAllState();bankOpen=false;delete document.body.dataset.amuraMode;document.getElementById("r13BankRoot").hidden=true;const start=document.getElementById("startPanel");if(document.body.dataset.status==="idle"&&start)start.hidden=false;document.title="AMURA · CÁMARA / BANCO · R13.1";}
+function boot(){ensureUi();const e=document.querySelector("#startPanel .eyebrow"),t=document.getElementById("cameraTitle"),l=document.getElementById("statusMessage"),p=document.querySelector("#startPanel .privacy");if(e)e.textContent="LABORATORIO · R13.1";if(t)t.textContent="CÁMARA O BANCO DE FOTOS";if(l)l.textContent="Cámara = movimiento real. Banco = las mismas 8 fotos reprocesadas desde cero.";if(p)p.textContent="BANCO no abre cámara. Usa MediaPipe IMAGE y reinicia todo el estado en cada foto.";document.title="AMURA · CÁMARA / BANCO · R13.1";}
+if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",boot,{once:true});else boot();
+window.AmuraStaticBank={items:BANK,open:openBank,close:closeBank,show:showBank,resetAllState};
