@@ -12,14 +12,6 @@ const LAB_STATE = {
   asset: "sin reloj · R15 final actual vs final nuevo"
 };
 
-export function updateWristWatch() {
-  return { ...LAB_STATE };
-}
-
-export function holdWristWatch() {
-  return { ...LAB_STATE };
-}
-
-export function hideWristWatch() {
-  return { ...LAB_STATE };
-}
+export function updateWristWatch() { return { ...LAB_STATE }; }
+export function holdWristWatch() { return { ...LAB_STATE }; }
+export function hideWristWatch() { return { ...LAB_STATE }; }
