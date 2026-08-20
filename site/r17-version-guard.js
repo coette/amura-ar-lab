@@ -1,4 +1,4 @@
-// AMURA R17.2 · guardia de versión visual + limpieza preventiva de cachés históricas.
+// AMURA R17.2 · guardia ligera de versión.
 // No toca tracking, nube, geometría ni el algoritmo verde/naranja.
 
 const REV = "R17.2";
@@ -24,25 +24,13 @@ function enforceLabels() {
   if (eyebrow) eyebrow.textContent = `LABORATORIO · ${REV}`;
   const title = document.getElementById("cameraTitle");
   if (title) title.textContent = "VERDE / NARANJA + AUTORRESCATE";
-  const lead = document.getElementById("statusMessage");
-  if (lead && document.body.dataset.status === "idle") {
-    lead.textContent = "Mismo método oficial verde/naranja, ahora con recuperación automática si la nube se pierde.";
-  }
   const labTitle = document.querySelector("#maskLabHud .lab-title");
   if (labTitle) labTitle.textContent = `${REV} · MÉTODO OFICIAL + RESCATE`;
-  const hint = document.getElementById("maskHint");
-  if (hint && /^R16 OFICIAL/.test(hint.textContent || "")) {
-    hint.textContent = `${REV} · VERDE: eje por secciones · NARANJA: final 5 cortes / 4 centros`;
-  }
-  const bankHeader = document.querySelector("#r16Hud > div:first-child");
-  if (bankHeader) bankHeader.textContent = `${REV} · MÉTODO OFICIAL VERDE/NARANJA`;
 }
 
+// Limpieza preventiva una sola vez. Sin observers ni bucles.
 clearLegacyRuntimeCaches();
 enforceLabels();
-
-const observer = new MutationObserver(enforceLabels);
-observer.observe(document.documentElement, { subtree: true, childList: true, characterData: true });
 window.addEventListener("DOMContentLoaded", enforceLabels, { once: true });
 window.addEventListener("pageshow", enforceLabels);
 
