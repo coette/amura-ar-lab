@@ -35,7 +35,7 @@
     <script type="importmap">
       {
         "imports": {
-          "./wrist-watch.js?v=11.2": "./wrist-watch-mask-lab.js?v=mask.15",
+          "./wrist-watch.js?v=11.2": "./wrist-watch-mask-lab.js?v=mask.15b",
           "./wrist-stabilizer.js?v=11.2": "./wrist-stabilizer.js?v=11.3.0",
           "./tuner.js?v=11.2": "./tuner.js?v=11.3.0",
           "./wrist-frame.js?v=11.2": "./wrist-frame.js?v=11.3.0",
@@ -64,11 +64,7 @@
         <button id="startButton" class="primary-button" type="button">Abrir cámara trasera</button>
       </section>
       <section id="requestPanel" class="requesting" role="status" aria-live="polite" hidden><span class="spinner" aria-hidden="true"></span><p>Esperando permiso de cámara…</p></section>
-      <aside id="maskLabHud" aria-label="Datos internos de máscara">
-        <p class="lab-title">LAB INTERNO</p>
-        <dl><dt>ESTADO</dt><dd id="maskStateValue">BUSCANDO P0</dd><dt>CENTRO X/Y</dt><dd id="maskCenterValue">—</dd><dt>ANCHO</dt><dd id="maskWidthValue">—</dd><dt>Δ FRAME</dt><dd id="maskDeltaValue">—</dd><dt>GIRO MP</dt><dd id="maskRollValue">—</dd><dt>COBERTURA</dt><dd id="maskCoverageValue">—</dd></dl>
-        <p id="maskHint">Datos internos del laboratorio.</p>
-      </aside>
+      <aside id="maskLabHud" aria-label="Datos internos de máscara"><p class="lab-title">LAB INTERNO</p><dl><dt>ESTADO</dt><dd id="maskStateValue">BUSCANDO P0</dd><dt>CENTRO X/Y</dt><dd id="maskCenterValue">—</dd><dt>ANCHO</dt><dd id="maskWidthValue">—</dd><dt>Δ FRAME</dt><dd id="maskDeltaValue">—</dd><dt>GIRO MP</dt><dd id="maskRollValue">—</dd><dt>COBERTURA</dt><dd id="maskCoverageValue">—</dd></dl><p id="maskHint">Datos internos del laboratorio.</p></aside>
       <button id="maskReadyButton" class="mask-action" type="button">LISTO · APRENDER BRAZO</button>
       <button id="maskPhotoButton" class="mask-action" type="button" hidden>FOTO</button>
       <button id="maskResetButton" class="mask-action" type="button" hidden>REPETIR</button>
