@@ -106,6 +106,25 @@ function currentP0() {
   return origin;
 }
 
+function currentP0Cut(width, height, calibrationState) {
+  const normalized = currentP0();
+  if (normalized) {
+    const point = {
+      x: normalized.x * width,
+      y: normalized.y * height
+    };
+    if (Number.isFinite(point.x) && Number.isFinite(point.y)) {
+      calibrationState.lastP0Cut = point;
+      return { point, source: "VIVO" };
+    }
+  }
+
+  if (calibrationState.lastP0Cut) {
+    return { point: calibrationState.lastP0Cut, source: "RETENIDO" };
+  }
+  return null;
+}
+
 function currentRoll() {
   const diagnostics = window.AmuraTrackingDiagnostics || {};
   return parseAngle(diagnostics["Giro Y muñeca"]);
@@ -517,11 +536,14 @@ function segmentFrame(imageData, calibrationState) {
   const searchHalfWidth = geometry.roiHalfWidth * 1.65;
   const searchStart = geometry.roiStart - geometry.roiEnd * 0.05;
   const searchEnd = geometry.roiEnd * 1.08;
+  const p0Cut = currentP0Cut(width, height, calibrationState);
+  const p0CutT = p0Cut ? coordinatesInGeometry(p0Cut.point.x, p0Cut.point.y, geometry).t : null;
 
   for (let y = 0; y < height; y += 1) {
     for (let x = 0; x < width; x += 1) {
       const local = coordinatesInGeometry(x + 0.5, y + 0.5, geometry);
       if (local.t < searchStart || local.t > searchEnd || Math.abs(local.u) > searchHalfWidth) continue;
+      if (Number.isFinite(p0CutT) && local.t < p0CutT) continue;
 
       const index = (y * width + x) * 4;
       if (!isSkinPixel(source[index], source[index + 1], source[index + 2], model, false)) continue;
@@ -570,7 +592,8 @@ function segmentFrame(imageData, calibrationState) {
     widthPx: widthVideoPx,
     coverage: bandCandidates > 0 ? measureCount / bandCandidates : 0,
     pixelCount: measureCount,
-    axisCenters: centers.length
+    axisCenters: centers.length,
+    p0CutSource: p0Cut ? p0Cut.source : "SIN P0"
   };
 }
 
@@ -596,7 +619,7 @@ function updateHud(metrics) {
     return;
   }
 
-  maskStateValue.textContent = "NUBE AUTÓNOMA · " + metrics.axisCenters + "/5 CENTROS";
+  maskStateValue.textContent = "NUBE AUTÓNOMA · P0 " + metrics.p0CutSource + " · " + metrics.axisCenters + "/5 CENTROS";
   maskCenterValue.textContent = metrics.centerX.toFixed(1) + " / " + metrics.centerY.toFixed(1) + " px";
   maskWidthValue.textContent = metrics.widthPx.toFixed(1) + " px";
   maskCoverageValue.textContent = (metrics.coverage * 100).toFixed(1) + "% · " + metrics.pixelCount + " px";
@@ -657,7 +680,8 @@ function calibrate() {
     measureStartFraction,
     measureEndFraction,
     learnedAt: Date.now(),
-    lastGoodAt: performance.now()
+    lastGoodAt: performance.now(),
+    lastP0Cut: geometry.p0 ? { x: geometry.p0.x, y: geometry.p0.y } : null
   };
   calibrated = true;
   lastMetrics = null;
@@ -665,7 +689,7 @@ function calibrate() {
   readyButton.hidden = true;
   resetButton.hidden = false;
   photoButton.hidden = false;
-  maskHint.textContent = "P0 ya no manda. La nube se sigue sola y la línea blanca sale de 5 centros del antebrazo. MediaPipe queda solo como diagnóstico/giro.";
+  maskHint.textContent = "La nube mueve sola la ventana. P0 solo recorta el lado de la mano; si se pierde, se mantiene el último P0 válido.";
 }
 
 function resetCalibration() {
@@ -711,7 +735,7 @@ function hudLinesForPhoto() {
     "Δ FRAME: " + maskDeltaValue.textContent,
     "GIRO MEDIAPIPE: " + maskRollValue.textContent,
     "COBERTURA: " + maskCoverageValue.textContent,
-    "P0: SOLO ARRANQUE · EJE MP: NO POSICIONA LA NUBE"
+    "P0: TOPE 2D MANO · NO POSICIONA NI REDIMENSIONA LA NUBE"
   ];
 }
 
