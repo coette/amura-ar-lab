@@ -8,17 +8,16 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="AMURA AR">
     <meta name="mobile-web-app-capable" content="yes">
-    <title>Amura AR · AR-04 · CALIBRACIÓN GUIADA</title>
+    <title>Amura AR · AR-04 · PIVOT MUÑECA</title>
     <link rel="manifest" href="manifest.webmanifest?v=11.2">
     <link rel="icon" href="icon.svg" type="image/svg+xml">
     <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
     <link rel="stylesheet" href="styles.css?v=11.2">
     <style>
-      /* AR-04: corredor solo durante calibración; después gobierna Hands puro. */
-      #tunerRoot { display: none !important; }
+      /* Corredor solo durante calibración. Después: Hands + pivot centro muñeca. */
+      #tunerRoot,
       #trackingCanvas,
-      #metricDepthHud,
-      .controls { display: none !important; }
+      #metricDepthHud { display: none !important; }
       #forearmEdgeCanvas { z-index: 99980 !important; }
       #ar04Marker {
         position: absolute;
@@ -34,12 +33,15 @@
         pointer-events: none;
         box-shadow: 0 2px 10px rgba(0,0,0,.35);
       }
+      .controls { z-index: 100010; }
+      body[data-calibrating="true"] .controls { display: none !important; }
+      #forearmEdgeButton { display: none !important; }
     </style>
     <script src="camera.js?v=11.2" defer></script>
     <script type="importmap">
       {
         "imports": {
-          "./wrist-watch.js?v=11.2": "./wrist-watch-calibration.js?v=cal.1",
+          "./wrist-watch.js?v=11.2": "./wrist-watch-guided-pivot.js?v=pivot.1",
           "./wrist-watch.js?v=ar02.2": "./wrist-watch.js?v=ar03.1-base",
           "./wrist-stabilizer.js?v=11.2": "./wrist-stabilizer.js?v=11.3.0",
           "./tuner.js?v=11.2": "./tuner.js?v=11.3.0",
@@ -48,12 +50,11 @@
         }
       }
     </script>
-    <script src="watch-x-control.js?v=ar03.4" type="module"></script>
+    <script src="watch-x-control.js?v=ar04pivot.1" type="module"></script>
     <script src="wrist-mode-control.js?v=ar03.4" type="module"></script>
-    <script src="hand-tracking.js?v=ar04cal.1" type="module"></script>
-    <script src="capture-screen.js?v=ar04cap.2" type="module"></script>
+    <script src="hand-tracking.js?v=ar04pivot.1" type="module"></script>
   </head>
-  <body data-status="idle" data-facing="environment" data-tracking="idle">
+  <body data-status="idle" data-facing="environment" data-tracking="idle" data-calibrating="true">
     <main class="camera-lab">
       <div id="ar04Marker">AR-04 · CALIBRACIÓN</div>
       <video
@@ -79,7 +80,7 @@
       <header class="topbar" style="display:none !important">
         <div>
           <p class="brand">AMURA</p>
-          <p class="phase">AR-04 · CALIBRACIÓN GUIADA</p>
+          <p class="phase">AR-04 · PIVOT MUÑECA</p>
         </div>
         <div class="status-pill" role="status" aria-live="polite">
           <span class="status-dot" aria-hidden="true"></span>
@@ -100,12 +101,12 @@
 
       <section id="startPanel" class="start-card" aria-labelledby="cameraTitle">
         <p class="eyebrow">PRUEBA DE MUÑECA</p>
-        <h1 id="cameraTitle">AR-04 · CALIBRACIÓN GUIADA</h1>
+        <h1 id="cameraTitle">AR-04 · PIVOT MUÑECA</h1>
         <p id="statusMessage" class="lead">
-          Alinea las líneas con tu antebrazo y pulsa LISTO. Después el reloj se moverá únicamente con MediaPipe Hands.
+          Alinea las líneas con tu antebrazo y pulsa LISTO. Después el corredor se apaga por completo.
         </p>
         <p class="privacy">
-          El corredor se apaga por completo después de calibrar. La guía tenue solo te orienta y no controla el reloj.
+          MediaPipe Hands mueve el reloj. La guía tenue solo orienta al usuario.
         </p>
         <p id="installHint" class="install-hint">
           SIN BARRAS EN IPHONE/IPAD: COMPARTIR → AÑADIR A PANTALLA DE INICIO
@@ -132,15 +133,9 @@
       </aside>
 
       <div class="rotation-modes" role="group" aria-label="Método de giro de muñeca" style="display:none !important">
-        <button class="rotation-mode" type="button" data-rotation-mode="world" aria-pressed="false">
-          WORLD
-        </button>
-        <button class="rotation-mode active" type="button" data-rotation-mode="image" aria-pressed="true">
-          IMAGE 3D
-        </button>
-        <button class="rotation-mode" type="button" data-rotation-mode="hybrid" aria-pressed="false">
-          HÍBRIDO
-        </button>
+        <button class="rotation-mode" type="button" data-rotation-mode="world" aria-pressed="false">WORLD</button>
+        <button class="rotation-mode active" type="button" data-rotation-mode="image" aria-pressed="true">IMAGE 3D</button>
+        <button class="rotation-mode" type="button" data-rotation-mode="hybrid" aria-pressed="false">HÍBRIDO</button>
       </div>
 
       <nav class="controls" aria-label="Controles AR-04">
@@ -164,9 +159,9 @@
           <span id="wristModeValue" class="control-value">TRANSPARENTE</span>
         </button>
 
-        <button id="watchXButton" class="control-button" type="button" aria-pressed="false" aria-label="Reloj visible en X cero">
+        <button id="watchXButton" class="control-button primary-control" type="button" aria-pressed="true" aria-label="Reloj visible en X menos 24 milímetros">
           <span class="control-label">X RELOJ</span>
-          <span id="watchXValue" class="control-value">0 mm</span>
+          <span id="watchXValue" class="control-value">−24 mm</span>
         </button>
 
         <button id="switchCameraButton" class="control-button primary-control" type="button" hidden style="display:none !important">
