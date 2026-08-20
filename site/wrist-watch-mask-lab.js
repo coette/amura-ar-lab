@@ -1,14 +1,14 @@
-import "./axis-r08-lab.js?v=r08.1";
+import "./axis-r09-lab.js?v=r09.1";
 
 const LAB_STATE = {
   status: "listo",
-  revision: "R08-EJE-NUBE",
+  revision: "R09-EJE-NUBE",
   visible: false,
   depthMm: 0,
   palmWidthMm: 0,
   reprojectionErrorPx: 0,
   contact: "—",
-  asset: "sin reloj · R08 eje nube"
+  asset: "sin reloj · R09 eje nube"
 };
 
 export function updateWristWatch() {
