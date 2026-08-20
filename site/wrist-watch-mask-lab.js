@@ -1,4 +1,4 @@
-import "./static-bank-player.js?v=r15.1";
+import "./static-bank-player.js?v=r15.2";
 import "./axis-r12-bank.js?v=r12bank.1";
 
 const LAB_STATE = {
