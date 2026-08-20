@@ -1,0 +1,118 @@
+name: Diagnose Cloudflare Pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/diagnose-cloudflare.yml'
+  workflow_dispatch:
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build exactly as deploy workflow
+        run: npm run build
+
+      - name: Query Cloudflare and compare served HTML
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_PROJECT_NAME: amura-engine-2
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+          const token = process.env.CLOUDFLARE_API_TOKEN;
+          const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
+          const project = process.env.CLOUDFLARE_PROJECT_NAME;
+          const headers = { Authorization: `Bearer ${token}` };
+          const api = `https://api.cloudflare.com/client/v4/accounts/${accountId}/pages/projects/${project}`;
+
+          async function cf(url) {
+            const r = await fetch(url, { headers });
+            const text = await r.text();
+            let j; try { j = JSON.parse(text); } catch { j = null; }
+            if (!r.ok || j?.success === false) throw new Error(`${r.status} ${text}`);
+            return j;
+          }
+          async function inspectUrl(url) {
+            try {
+              const r = await fetch(`${url}${url.includes('?') ? '&' : '?'}diag=${Date.now()}`, { cache: 'no-store', redirect: 'follow' });
+              const text = await r.text();
+              const title = (text.match(/<title>([^<]*)<\/title>/i)||[])[1] || null;
+              const eyebrow = (text.match(/LABORATORIO\s*·\s*R[^<]*/i)||[])[0] || null;
+              return {
+                status: r.status,
+                finalUrl: r.url,
+                title,
+                eyebrow,
+                hasR171: text.includes('R17.1'),
+                hasR17: text.includes('R17'),
+                hasR16: text.includes('R16'),
+                bytes: text.length,
+                head: text.slice(0, 500)
+              };
+            } catch (e) { return { error: String(e) }; }
+          }
+
+          const localSite = fs.readFileSync('site/index.html','utf8');
+          const localDist = fs.readFileSync('dist/index.html','utf8');
+          const proj = (await cf(api)).result;
+          const listBody = await cf(`${api}/deployments?page=1&per_page=20`);
+          const deployments = listBody.result || [];
+          const out = {
+            generatedAt: new Date().toISOString(),
+            githubSha: process.env.GITHUB_SHA,
+            local: {
+              siteTitle: (localSite.match(/<title>([^<]*)<\/title>/i)||[])[1] || null,
+              distTitle: (localDist.match(/<title>([^<]*)<\/title>/i)||[])[1] || null,
+              siteEqualsDist: localSite === localDist,
+              siteHasR171: localSite.includes('R17.1'),
+              distHasR171: localDist.includes('R17.1')
+            },
+            project: {
+              name: proj?.name,
+              productionBranch: proj?.production_branch,
+              subdomain: proj?.subdomain,
+              source: proj?.source || null,
+              latestDeployment: proj?.latest_deployment ? {
+                id: proj.latest_deployment.id,
+                url: proj.latest_deployment.url,
+                aliases: proj.latest_deployment.aliases,
+                created_on: proj.latest_deployment.created_on,
+                environment: proj.latest_deployment.environment,
+                trigger: proj.latest_deployment.deployment_trigger
+              } : null
+            },
+            publicMain: await inspectUrl('https://amura-engine-2.pages.dev/'),
+            deployments: []
+          };
+          for (const d of deployments.slice(0,10)) {
+            out.deployments.push({
+              id: d.id,
+              created_on: d.created_on,
+              environment: d.environment,
+              url: d.url,
+              aliases: d.aliases,
+              trigger: d.deployment_trigger,
+              source: d.source,
+              stages: d.stages,
+              served: await inspectUrl(d.url)
+            });
+          }
+          fs.writeFileSync('cloudflare-diagnosis.json', JSON.stringify(out, null, 2));
+          console.log(JSON.stringify(out, null, 2));
+          NODE
+
+      - name: Save diagnosis to repository
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add cloudflare-diagnosis.json
+          git commit -m 'Record Cloudflare deployment diagnosis' || exit 0
+          git push
