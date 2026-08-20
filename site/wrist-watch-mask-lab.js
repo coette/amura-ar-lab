@@ -1,15 +1,14 @@
-import "./axis-r07-lab.js?v=r07.1";
-import "./mask-photo-share.js?v=share.2";
+import "./axis-r08-lab.js?v=r08.1";
 
 const LAB_STATE = {
   status: "listo",
-  revision: "R07-EJE-NUBE",
+  revision: "R08-EJE-NUBE",
   visible: false,
   depthMm: 0,
   palmWidthMm: 0,
   reprojectionErrorPx: 0,
   contact: "—",
-  asset: "sin reloj · R07 eje nube"
+  asset: "sin reloj · R08 eje nube"
 };
 
 export function updateWristWatch() {
