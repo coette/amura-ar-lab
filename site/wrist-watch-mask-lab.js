@@ -2,7 +2,7 @@ import "./static-bank-player-r16.js?v=r17.2";
 import "./r16-bank-fix.js?v=r17.2";
 import "./axis-r16-live.js?v=r17.2";
 import "./r17-auto-rescue.js?v=r17.2";
-import "./r17-version-guard.js?v=r17.2";
+import "./r17-version-guard.js?v=r17.2-fix1";
 
 const LAB_STATE = {
   status: "listo",
