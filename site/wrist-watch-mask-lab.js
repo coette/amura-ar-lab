@@ -1,14 +1,14 @@
-import "./axis-r11-lab.js?v=r11.1";
+import "./axis-r12-lab.js?v=r12.1";
 
 const LAB_STATE = {
   status: "listo",
-  revision: "R11-P0-DIAGNOSTICO",
+  revision: "R12-CAPTURA-FALLOS",
   visible: false,
   depthMm: 0,
   palmWidthMm: 0,
   reprojectionErrorPx: 0,
   contact: "—",
-  asset: "sin reloj · R11 diagnóstico P0"
+  asset: "sin reloj · R12 captura libre de fallos"
 };
 
 export function updateWristWatch() {
