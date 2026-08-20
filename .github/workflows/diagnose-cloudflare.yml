@@ -45,13 +45,15 @@ jobs:
               return j;
             }
 
-            async function inspectUrl(url) {
+            async function inspectUrl(url, bust = false) {
               try {
-                const r = await fetch(`${url}${url.includes('?') ? '&' : '?'}diag=${Date.now()}`, { cache: 'no-store', redirect: 'follow' });
+                const target = bust ? `${url}${url.includes('?') ? '&' : '?'}diag=${Date.now()}` : url;
+                const r = await fetch(target, { redirect: 'follow' });
                 const text = await r.text();
                 const title = (text.match(/<title>([^<]*)<\/title>/i)||[])[1] || null;
                 const eyebrow = (text.match(/LABORATORIO\s*·\s*R[^<]*/i)||[])[0] || null;
                 return {
+                  requestedUrl: target,
                   status: r.status,
                   finalUrl: r.url,
                   title,
@@ -60,6 +62,14 @@ jobs:
                   hasR17: text.includes('R17'),
                   hasR16: text.includes('R16'),
                   bytes: text.length,
+                  headers: {
+                    cacheControl: r.headers.get('cache-control'),
+                    cfCacheStatus: r.headers.get('cf-cache-status'),
+                    age: r.headers.get('age'),
+                    etag: r.headers.get('etag'),
+                    lastModified: r.headers.get('last-modified'),
+                    cfRay: r.headers.get('cf-ray')
+                  },
                   head: text.slice(0, 500)
                 };
               } catch (e) {
@@ -73,6 +83,7 @@ jobs:
             const listBody = await cf(`${api}/deployments?page=1&per_page=20`);
             const deployments = listBody.result || [];
 
+            const publicUrl = 'https://amura-engine-2.pages.dev/';
             const out = {
               generatedAt: new Date().toISOString(),
               githubSha: process.env.GITHUB_SHA,
@@ -97,11 +108,12 @@ jobs:
                   trigger: proj.latest_deployment.deployment_trigger
                 } : null
               },
-              publicMain: await inspectUrl('https://amura-engine-2.pages.dev/'),
+              publicMainBare: await inspectUrl(publicUrl, false),
+              publicMainBusted: await inspectUrl(publicUrl, true),
               deployments: []
             };
 
-            for (const d of deployments.slice(0,10)) {
+            for (const d of deployments.slice(0,6)) {
               out.deployments.push({
                 id: d.id,
                 created_on: d.created_on,
@@ -109,9 +121,8 @@ jobs:
                 url: d.url,
                 aliases: d.aliases,
                 trigger: d.deployment_trigger,
-                source: d.source,
-                stages: d.stages,
-                served: await inspectUrl(d.url)
+                servedBare: await inspectUrl(d.url + '/', false),
+                servedBusted: await inspectUrl(d.url + '/', true)
               });
             }
 
