@@ -1,17 +1,18 @@
-import "./static-bank-player-r16.js?v=r16.1";
-import "./r16-bank-fix.js?v=r16.1";
-import "./axis-r16-live.js?v=r16.1";
-import "./r17-auto-rescue.js?v=r17.1";
+import "./static-bank-player-r16.js?v=r17.2";
+import "./r16-bank-fix.js?v=r17.2";
+import "./axis-r16-live.js?v=r17.2";
+import "./r17-auto-rescue.js?v=r17.2";
+import "./r17-version-guard.js?v=r17.2";
 
 const LAB_STATE = {
   status: "listo",
-  revision: "R17-AUTO-RESCUE",
+  revision: "R17.2-AUTO-RESCUE",
   visible: false,
   depthMm: 0,
   palmWidthMm: 0,
   reprojectionErrorPx: 0,
   contact: "—",
-  asset: "sin reloj · R16 verde/naranja + R17 autorescate"
+  asset: "sin reloj · verde/naranja oficial + R17.2 autorescate"
 };
 
 export function updateWristWatch() { return { ...LAB_STATE }; }
