@@ -176,10 +176,16 @@ function saveGood(snapshot) {
 
 function restoreGoodGlobals() {
   if (!frozen) return;
-  if (lastGoodR16) window.AmuraR16AxisMetrics = clone(lastGoodR16);
+  const now = performance.now();
+  if (lastGoodR16) {
+    const r16 = clone(lastGoodR16);
+    r16.updatedAt = now;
+    if (r16.final) r16.final.updatedAt = now;
+    window.AmuraR16AxisMetrics = r16;
+  }
   if (lastGoodR09) {
     const metric = clone(lastGoodR09);
-    metric.updatedAt = performance.now();
+    metric.updatedAt = now;
     window.AmuraR09AxisMetrics = metric;
   }
 }
@@ -228,6 +234,7 @@ async function relocalize(reason) {
     if (s?.calibrated) {
       badCount = 0;
       badDuringP0Loss = false;
+      p0MissingSince = 0;
       waitingForP0 = false;
       calibratedSince = performance.now();
       ignoreUntil = calibratedSince + WARMUP_MS;
@@ -253,7 +260,10 @@ function updateP0(now) {
       p0MissingSince = 0;
       relocalize("P0 volvió tras pérdida");
     } else if (waitingForP0 && p0StableCount >= P0_STABLE_LIMIT) {
+      p0MissingSince = 0;
       relocalize("P0 disponible");
+    } else if (!badDuringP0Loss) {
+      p0MissingSince = 0;
     }
   } else {
     p0StableCount = 0;
