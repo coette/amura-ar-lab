@@ -1,6 +1,8 @@
 const maskCanvas = document.getElementById("maskCanvas");
 const maskContext = maskCanvas && maskCanvas.getContext("2d");
 const video = document.getElementById("cameraVideo");
+const readyButton = document.getElementById("maskReadyButton");
+const resetButton = document.getElementById("maskResetButton");
 const maskStateValue = document.getElementById("maskStateValue");
 const maskCenterValue = document.getElementById("maskCenterValue");
 const maskDeltaValue = document.getElementById("maskDeltaValue");
@@ -10,9 +12,11 @@ const measureValue = document.getElementById("maskMeasureValue");
 
 const AXIS_SLICE_FRACTIONS = [0.18, 0.32, 0.46, 0.60, 0.74];
 const SAMPLE_INTERVAL_MS = 85;
+
 let lastRunAt = 0;
 let lastStableMetric = null;
-let lastProjectedP0 = null;
+let pendingP0AtListo = null;
+let anchorCalibration = null;
 let raf = 0;
 let rewritingMeasure = false;
 let allowOwnStroke = false;
@@ -22,10 +26,6 @@ function parseVector(value) {
   const numbers = String(value).split(",").map((item) => Number(item.trim()));
   if (numbers.length < 2 || !numbers.every(Number.isFinite)) return null;
   return { x: numbers[0], y: numbers[1], z: numbers[2] || 0 };
-}
-
-function clamp(value, min, max) {
-  return Math.max(min, Math.min(max, value));
 }
 
 function median(values) {
@@ -41,6 +41,7 @@ function fitAxis(points, preferredDirection) {
     x: points.reduce((sum, point) => sum + point.x, 0) / points.length,
     y: points.reduce((sum, point) => sum + point.y, 0) / points.length
   };
+
   let xx = 0;
   let xy = 0;
   let yy = 0;
@@ -51,6 +52,7 @@ function fitAxis(points, preferredDirection) {
     xy += dx * dy;
     yy += dy * dy;
   });
+
   const angle = 0.5 * Math.atan2(2 * xy, xx - yy);
   let direction = { x: Math.cos(angle), y: Math.sin(angle) };
   if (preferredDirection && direction.x * preferredDirection.x + direction.y * preferredDirection.y < 0) {
@@ -59,7 +61,8 @@ function fitAxis(points, preferredDirection) {
   return { mean, direction, perpendicular: { x: -direction.y, y: direction.x } };
 }
 
-function currentP0Analysis() {
+// ÚNICA lectura de P0 para posición: se llama al pulsar LISTO, nunca durante el tracking posterior.
+function captureP0AtListo() {
   if (!maskCanvas || !maskCanvas.width || !maskCanvas.height) return null;
   const diagnostics = window.AmuraTrackingDiagnostics || {};
   if (diagnostics["Mano detectada"] !== "sí") return null;
@@ -131,20 +134,52 @@ function projectPointOnAxis(point, axis) {
   const along = dx * axis.direction.x + dy * axis.direction.y;
   return {
     x: axis.mean.x + axis.direction.x * along,
-    y: axis.mean.y + axis.direction.y * along
+    y: axis.mean.y + axis.direction.y * along,
+    along
   };
 }
 
-function drawStableAxis(axis, centers, projectedP0) {
-  if (!maskContext || !axis || centers.length < 4 || !projectedP0) return;
+function axisSpan(axis, points) {
+  const projections = points.map((point) =>
+    (point.x - axis.mean.x) * axis.direction.x + (point.y - axis.mean.y) * axis.direction.y
+  );
+  if (projections.length < 2) return 0;
+  return Math.max(...projections) - Math.min(...projections);
+}
+
+function makeAnchorCalibration(p0, axis, stableCenters) {
+  if (!p0 || !axis || stableCenters.length < 4) return null;
+  const span = axisSpan(axis, stableCenters);
+  if (!Number.isFinite(span) || span < 8) return null;
+  const projected = projectPointOnAxis(p0, axis);
+  return {
+    alongPerSpan: projected.along / span,
+    initialSpan: span,
+    capturedAt: performance.now()
+  };
+}
+
+function transportedAnchor(axis, stableCenters, calibration) {
+  const span = axisSpan(axis, stableCenters);
+  if (!calibration || !Number.isFinite(span) || span < 8) return null;
+  const along = calibration.alongPerSpan * span;
+  return {
+    x: axis.mean.x + axis.direction.x * along,
+    y: axis.mean.y + axis.direction.y * along,
+    span
+  };
+}
+
+function drawStableAxis(axis, centers, wristAnchor) {
+  if (!maskContext || !axis || centers.length < 5 || !wristAnchor) return;
   const stableCenters = centers.slice(1);
   const projections = stableCenters.map((point) =>
-    (point.x - projectedP0.x) * axis.direction.x + (point.y - projectedP0.y) * axis.direction.y
+    (point.x - wristAnchor.x) * axis.direction.x + (point.y - wristAnchor.y) * axis.direction.y
   );
   const far = Math.max(24, ...projections) + 18;
   const end = {
-    x: projectedP0.x + axis.direction.x * far,
-    y: projectedP0.y + axis.direction.y * far
+    x: wristAnchor.x + axis.direction.x * far,
+    y: wristAnchor.y + axis.direction.y * far
   };
 
   maskContext.save();
@@ -153,7 +188,7 @@ function drawStableAxis(axis, centers, projectedP0) {
   maskContext.strokeStyle = "rgba(255,255,255,.99)";
   maskContext.lineWidth = 4;
   maskContext.beginPath();
-  maskContext.moveTo(projectedP0.x, projectedP0.y);
+  maskContext.moveTo(wristAnchor.x, wristAnchor.y);
   maskContext.lineTo(end.x, end.y);
   maskContext.stroke();
 
@@ -165,24 +200,23 @@ function drawStableAxis(axis, centers, projectedP0) {
   });
 
   const excluded = centers[0];
-  if (excluded) {
-    maskContext.strokeStyle = "rgba(255,190,90,.98)";
-    maskContext.lineWidth = 2;
-    maskContext.beginPath();
-    maskContext.arc(excluded.x, excluded.y, 6, 0, Math.PI * 2);
-    maskContext.stroke();
-  }
+  maskContext.strokeStyle = "rgba(255,190,90,.98)";
+  maskContext.lineWidth = 2;
+  maskContext.beginPath();
+  maskContext.arc(excluded.x, excluded.y, 6, 0, Math.PI * 2);
+  maskContext.stroke();
 
+  // Marca de la muñeca transportada por la nube: ya no es P0 vivo.
   maskContext.strokeStyle = "rgba(255,255,255,.99)";
   maskContext.lineWidth = 3;
   maskContext.beginPath();
   maskContext.moveTo(
-    projectedP0.x - axis.perpendicular.x * 8,
-    projectedP0.y - axis.perpendicular.y * 8
+    wristAnchor.x - axis.perpendicular.x * 9,
+    wristAnchor.y - axis.perpendicular.y * 9
   );
   maskContext.lineTo(
-    projectedP0.x + axis.perpendicular.x * 8,
-    projectedP0.y + axis.perpendicular.y * 8
+    wristAnchor.x + axis.perpendicular.x * 9,
+    wristAnchor.y + axis.perpendicular.y * 9
   );
   maskContext.stroke();
 
@@ -190,12 +224,7 @@ function drawStableAxis(axis, centers, projectedP0) {
   maskContext.restore();
 }
 
-function parseFirstNumber(text) {
-  const match = String(text || "").match(/-?\d+(?:\.\d+)?/);
-  return match ? Number(match[0]) : null;
-}
-
-function updateLabels(metric, p0Held) {
+function updateLabels(metric) {
   if (!metric || !video || !maskCanvas) return;
   const scaleX = (video.videoWidth || maskCanvas.width) / maskCanvas.width;
   const scaleY = (video.videoHeight || maskCanvas.height) / maskCanvas.height;
@@ -207,18 +236,19 @@ function updateLabels(metric, p0Held) {
   const dt = maskCenterValue && maskCenterValue.previousElementSibling;
   if (dt) dt.textContent = "EJE@P0 X/Y";
   if (maskCenterValue) maskCenterValue.textContent = videoMetric.x.toFixed(1) + " / " + videoMetric.y.toFixed(1) + " px";
-  if (maskStateValue) maskStateValue.textContent = "CRUDO · EJE 4/5 + P0 " + (p0Held ? "RETENIDO" : "PROYECTADO");
+  if (maskStateValue) maskStateValue.textContent = "CRUDO · EJE 4/5 · P0 CAL TRANSPORTADO";
 
   if (maskDeltaValue) {
     const delta = lastStableMetric
       ? Math.hypot(videoMetric.x - lastStableMetric.x, videoMetric.y - lastStableMetric.y)
       : null;
-    const width = parseFirstNumber(maskWidthValue && maskWidthValue.textContent);
-    const widthDeltaMatch = String(maskDeltaValue.textContent || "").match(/ancho\s+([+-]?\d+(?:\.\d+)?)/i);
+    const oldText = String(maskDeltaValue.textContent || "");
+    const widthDeltaMatch = oldText.match(/ancho\s+([+-]?\d+(?:\.\d+)?)/i);
     const widthDelta = widthDeltaMatch ? Number(widthDeltaMatch[1]) : null;
     maskDeltaValue.textContent = delta === null
       ? "eje@P0 primer frame"
-      : "eje@P0 " + delta.toFixed(1) + " px" + (Number.isFinite(widthDelta) ? " · ancho " + (widthDelta >= 0 ? "+" : "") + widthDelta.toFixed(1) + " px" : (Number.isFinite(width) ? "" : ""));
+      : "eje@P0 " + delta.toFixed(1) + " px" +
+        (Number.isFinite(widthDelta) ? " · ancho " + (widthDelta >= 0 ? "+" : "") + widthDelta.toFixed(1) + " px" : "");
     lastStableMetric = videoMetric;
   }
 
@@ -227,7 +257,9 @@ function updateLabels(metric, p0Held) {
     centerY: videoMetric.y,
     analysisX: metric.x,
     analysisY: metric.y,
-    p0Held,
+    cloudSpan: metric.span,
+    p0Source: "CAPTURADO_SOLO_EN_LISTO",
+    mediaPipePositionReadsAfterListo: 0,
     centersUsed: 4,
     excludedCenter: 1,
     updatedAt: performance.now()
@@ -247,10 +279,30 @@ function rewriteMeasurementText() {
   rewritingMeasure = false;
 }
 
+function resetAnchorExperiment() {
+  pendingP0AtListo = null;
+  anchorCalibration = null;
+  lastStableMetric = null;
+  window.AmuraAxisStableMetrics = null;
+}
+
+// Captura P0 exactamente en el gesto de LISTO. Después no volvemos a consultar P0 para posición.
+if (readyButton) {
+  readyButton.addEventListener("click", () => {
+    resetAnchorExperiment();
+    pendingP0AtListo = captureP0AtListo();
+  }, true);
+}
+
+if (resetButton) {
+  resetButton.addEventListener("click", resetAnchorExperiment, true);
+}
+
 function run(now) {
   raf = requestAnimationFrame(run);
   if (now - lastRunAt < SAMPLE_INTERVAL_MS) return;
   lastRunAt = now;
+
   const snapshot = window.AmuraForearmMaskLab && window.AmuraForearmMaskLab.snapshot
     ? window.AmuraForearmMaskLab.snapshot()
     : null;
@@ -259,29 +311,34 @@ function run(now) {
   const centers = collectCentersFromCloud(snapshot.geometry);
   if (centers.length < 5) return;
 
-  const stableCenters = centers.slice(1);
+  const stableCenters = centers.slice(1); // el centro más próximo a la mano no decide dirección ni posición.
   const axis = fitAxis(stableCenters, snapshot.geometry.elbow);
   if (!axis) return;
 
-  let p0 = currentP0Analysis();
-  let p0Held = false;
-  if (!p0 && lastProjectedP0) {
-    p0 = lastProjectedP0;
-    p0Held = true;
+  if (!anchorCalibration) {
+    if (!pendingP0AtListo) {
+      if (maskStateValue) maskStateValue.textContent = "CRUDO · P0 NO CAPTURADO · REPITE";
+      if (maskHint) maskHint.textContent = "P0 no estaba disponible al pulsar LISTO. Pulsa REPETIR; después de LISTO no leeremos MediaPipe para posición.";
+      return;
+    }
+    anchorCalibration = makeAnchorCalibration(pendingP0AtListo, axis, stableCenters);
+    pendingP0AtListo = null;
+    if (!anchorCalibration) return;
   }
-  if (!p0) return;
 
-  const projectedP0 = p0Held ? projectPointOnAxis(p0, axis) : projectPointOnAxis(p0, axis);
-  lastProjectedP0 = projectedP0;
+  const wristAnchor = transportedAnchor(axis, stableCenters, anchorCalibration);
+  if (!wristAnchor) return;
 
-  drawStableAxis(axis, centers, projectedP0);
-  updateLabels(projectedP0, p0Held);
+  drawStableAxis(axis, centers, wristAnchor);
+  updateLabels(wristAnchor);
   rewriteMeasurementText();
+
   if (maskHint) {
-    maskHint.textContent = "4 centros estables deciden la dirección. El centro cercano a P0 no vota. P0 solo se proyecta sobre esa línea; la nube sigue gobernando la ventana.";
+    maskHint.textContent = "P0 se leyó una sola vez en LISTO. Ahora 4 centros de la nube transportan solos dirección, posición y escala de la muñeca; MediaPipe ya no toca la posición.";
   }
 }
 
+// Oculta la línea blanca antigua de 5 centros para que solo evaluemos el eje 4/5 + anclaje transportado.
 if (maskContext) {
   const originalStroke = maskContext.stroke.bind(maskContext);
   maskContext.stroke = function (...args) {
