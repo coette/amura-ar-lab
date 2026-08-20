@@ -6,9 +6,9 @@
     <meta name="theme-color" content="#000000">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="AMURA AR">
+    <meta name="apple-mobile-web-app-title" content="AMURA R07">
     <meta name="mobile-web-app-capable" content="yes">
-    <title>Amura AR · LAB EJE POR NUBE</title>
+    <title>AMURA · EJE NUBE · R07</title>
     <link rel="manifest" href="manifest.webmanifest?v=11.2">
     <link rel="icon" href="icon.svg" type="image/svg+xml">
     <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
@@ -21,7 +21,7 @@
       .controls { display: none !important; }
 
       #trackingCanvas {
-        display: block !important;
+        display: none !important;
         position: absolute;
         inset: 0;
         width: 100%;
@@ -112,14 +112,7 @@
         bottom: calc(env(safe-area-inset-bottom, 0px) + 18px);
       }
 
-      #trackingHud {
-        top: auto !important;
-        bottom: calc(env(safe-area-inset-bottom, 0px) + 78px) !important;
-        left: 50% !important;
-        transform: translateX(-50%);
-        z-index: 100010 !important;
-        white-space: nowrap;
-      }
+      #trackingHud { display: none !important; }
 
       body[data-status="idle"] #maskLabHud,
       body[data-status="requesting"] #maskLabHud,
@@ -133,7 +126,7 @@
     <script type="importmap">
       {
         "imports": {
-          "./wrist-watch.js?v=11.2": "./wrist-watch-mask-lab.js?v=mask.2",
+          "./wrist-watch.js?v=11.2": "./wrist-watch-mask-lab.js?v=mask.3",
           "./wrist-stabilizer.js?v=11.2": "./wrist-stabilizer.js?v=11.3.0",
           "./tuner.js?v=11.2": "./tuner.js?v=11.3.0",
           "./wrist-frame.js?v=11.2": "./wrist-frame.js?v=11.3.0",
@@ -162,7 +155,7 @@
       <header class="topbar" style="display:none !important">
         <div>
           <p class="brand">AMURA</p>
-          <p class="phase">LAB · EJE POR NUBE</p>
+          <p class="phase">LAB · EJE NUBE · R07</p>
         </div>
         <div class="status-pill" role="status" aria-live="polite">
           <span class="status-dot" aria-hidden="true"></span>
@@ -176,13 +169,13 @@
       </div>
 
       <section id="startPanel" class="start-card" aria-labelledby="cameraTitle">
-        <p class="eyebrow">LABORATORIO</p>
+        <p class="eyebrow">LABORATORIO · R07</p>
         <h1 id="cameraTitle">EJE DEL ANTEBRAZO POR NUBE</h1>
         <p id="statusMessage" class="lead">
           Pon la mano a la derecha y el antebrazo hacia la izquierda sobre un fondo distinto de la piel.
         </p>
         <p class="privacy">
-          P0 solo marca dónde empieza la muñeca. La imagen busca los bordes del antebrazo; tras LISTO la nube se sigue a sí misma.
+          R07 mide una sola cosa: estabilidad de la línea blanca de la nube con el brazo quieto.
         </p>
         <p id="installHint" class="install-hint">
           SIN BARRAS EN IPHONE/IPAD: COMPARTIR → AÑADIR A PANTALLA DE INICIO
@@ -197,8 +190,8 @@
         <p>Esperando permiso de cámara…</p>
       </section>
 
-      <aside id="maskLabHud" aria-label="Datos crudos de máscara">
-        <p class="lab-title">LAB · EJE POR NUBE</p>
+      <aside id="maskLabHud" aria-label="Datos internos de máscara">
+        <p class="lab-title">LAB INTERNO</p>
         <dl>
           <dt>ESTADO</dt><dd id="maskStateValue">BUSCANDO P0</dd>
           <dt>CENTRO X/Y</dt><dd id="maskCenterValue">—</dd>
@@ -207,7 +200,7 @@
           <dt>GIRO MP</dt><dd id="maskRollValue">—</dd>
           <dt>COBERTURA</dt><dd id="maskCoverageValue">—</dd>
         </dl>
-        <p id="maskHint">P0 solo marca el inicio. El corredor amarillo debe salir desde la muñeca hacia el codo y abrazar el antebrazo antes de LISTO.</p>
+        <p id="maskHint">Datos internos ocultos en R07.</p>
       </aside>
 
       <button id="maskReadyButton" class="mask-action" type="button">LISTO · APRENDER BRAZO</button>
