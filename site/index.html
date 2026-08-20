@@ -8,7 +8,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="AMURA AR">
     <meta name="mobile-web-app-capable" content="yes">
-    <title>Amura AR · LAB MÁSCARA ANTEBRAZO</title>
+    <title>Amura AR · LAB EJE POR NUBE</title>
     <link rel="manifest" href="manifest.webmanifest?v=11.2">
     <link rel="icon" href="icon.svg" type="image/svg+xml">
     <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
@@ -129,6 +129,7 @@
       }
     </style>
     <script src="camera.js?v=11.2" defer></script>
+    <script src="camera-lens-lock-lab.js?v=lens.1" type="module"></script>
     <script type="importmap">
       {
         "imports": {
@@ -141,7 +142,7 @@
       }
     </script>
     <script src="hand-tracking.js?v=masklab.1" type="module"></script>
-    <script src="forearm-mask-lab.js?v=masklab.1" type="module"></script>
+    <script src="forearm-mask-lab-v2.js?v=axis.1" type="module"></script>
   </head>
   <body data-status="idle" data-facing="environment" data-tracking="idle">
     <main class="camera-lab">
@@ -161,7 +162,7 @@
       <header class="topbar" style="display:none !important">
         <div>
           <p class="brand">AMURA</p>
-          <p class="phase">LAB · MÁSCARA ANTEBRAZO</p>
+          <p class="phase">LAB · EJE POR NUBE</p>
         </div>
         <div class="status-pill" role="status" aria-live="polite">
           <span class="status-dot" aria-hidden="true"></span>
@@ -176,12 +177,12 @@
 
       <section id="startPanel" class="start-card" aria-labelledby="cameraTitle">
         <p class="eyebrow">LABORATORIO</p>
-        <h1 id="cameraTitle">MÁSCARA DE ANTEBRAZO</h1>
+        <h1 id="cameraTitle">EJE DEL ANTEBRAZO POR NUBE</h1>
         <p id="statusMessage" class="lead">
-          Pon el antebrazo sobre un fondo distinto de la piel. MediaPipe queda visible solo como guía de distancia.
+          Pon la mano a la derecha y el antebrazo hacia la izquierda sobre un fondo distinto de la piel.
         </p>
         <p class="privacy">
-          Al pulsar LISTO aprendemos el color del antebrazo. Después medimos centro y anchura crudos, sin filtro y sin reloj.
+          P0 solo marca dónde empieza la muñeca. La imagen busca los bordes del antebrazo; tras LISTO la nube se sigue a sí misma.
         </p>
         <p id="installHint" class="install-hint">
           SIN BARRAS EN IPHONE/IPAD: COMPARTIR → AÑADIR A PANTALLA DE INICIO
@@ -197,16 +198,16 @@
       </section>
 
       <aside id="maskLabHud" aria-label="Datos crudos de máscara">
-        <p class="lab-title">LAB · MÁSCARA ANTEBRAZO</p>
+        <p class="lab-title">LAB · EJE POR NUBE</p>
         <dl>
-          <dt>ESTADO</dt><dd id="maskStateValue">BUSCANDO MANO</dd>
+          <dt>ESTADO</dt><dd id="maskStateValue">BUSCANDO P0</dd>
           <dt>CENTRO X/Y</dt><dd id="maskCenterValue">—</dd>
           <dt>ANCHO</dt><dd id="maskWidthValue">—</dd>
           <dt>Δ FRAME</dt><dd id="maskDeltaValue">—</dd>
           <dt>GIRO MP</dt><dd id="maskRollValue">—</dd>
           <dt>COBERTURA</dt><dd id="maskCoverageValue">—</dd>
         </dl>
-        <p id="maskHint">Coloca el antebrazo sobre un fondo distinto de la piel. Cuando MediaPipe lo vea bien, pulsa LISTO.</p>
+        <p id="maskHint">P0 solo marca el inicio. El corredor amarillo debe salir desde la muñeca hacia el codo y abrazar el antebrazo antes de LISTO.</p>
       </aside>
 
       <button id="maskReadyButton" class="mask-action" type="button">LISTO · APRENDER BRAZO</button>
