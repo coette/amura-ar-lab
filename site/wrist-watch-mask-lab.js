@@ -1,14 +1,14 @@
-import "./axis-r10-lab.js?v=r10.1";
+import "./axis-r11-lab.js?v=r11.1";
 
 const LAB_STATE = {
   status: "listo",
-  revision: "R10-EJE-NUBE",
+  revision: "R11-P0-DIAGNOSTICO",
   visible: false,
   depthMm: 0,
   palmWidthMm: 0,
   reprojectionErrorPx: 0,
   contact: "—",
-  asset: "sin reloj · R10 eje por nube"
+  asset: "sin reloj · R11 diagnóstico P0"
 };
 
 export function updateWristWatch() {
