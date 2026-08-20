@@ -25,10 +25,6 @@ let rafHandle = 0;
 let lastMetrics = null;
 let currentMetrics = null;
 
-function clamp(value, minimum, maximum) {
-  return Math.min(maximum, Math.max(minimum, value));
-}
-
 function parseVector(value) {
   if (!value || value === "—") return null;
   const numbers = String(value).split(",").map((item) => Number(item.trim()));
@@ -231,9 +227,12 @@ function drawGeometryOutline(geometry, context, calibratedState) {
 }
 
 function paintPreviewGuide() {
-  maskContext.clearRect(0, 0, maskCanvas.width, maskCanvas.height);
   const guide = currentMediaPipeGuide();
-  if (!guide || !ensureCanvasSize()) return;
+  if (!guide || !ensureCanvasSize()) {
+    maskContext.clearRect(0, 0, maskCanvas.width, maskCanvas.height);
+    return;
+  }
+  maskContext.clearRect(0, 0, maskCanvas.width, maskCanvas.height);
   drawGeometryOutline(pixelGeometry(guide), maskContext, false);
 }
 
@@ -261,6 +260,9 @@ function segmentFrame(imageData, calibrationState) {
       );
       if (!inRoi) continue;
 
+      const inMeasureBand = local.t >= geometry.measureStart && local.t <= geometry.measureEnd;
+      if (inMeasureBand) bandCandidates += 1;
+
       const index = (y * width + x) * 4;
       const skin = isSkinPixel(source[index], source[index + 1], source[index + 2], model);
       if (!skin) continue;
@@ -270,8 +272,7 @@ function segmentFrame(imageData, calibrationState) {
       target[index + 2] = 255;
       target[index + 3] = 92;
 
-      if (local.t >= geometry.measureStart && local.t <= geometry.measureEnd) {
-        bandCandidates += 1;
+      if (inMeasureBand) {
         count += 1;
         sumX += x + 0.5;
         sumY += y + 0.5;
@@ -396,7 +397,7 @@ function calibrate() {
   readyButton.hidden = true;
   resetButton.hidden = false;
   photoButton.hidden = false;
-  maskHint.textContent = "Ya no se recentra con MediaPipe. Quieto → acerca/aleja → gira 0°→90°. La máscara y los números son crudos.";
+  maskHint.textContent = "MediaPipe ya no recentra la máscara. Quieto → acerca/aleja → gira 0°→90°. Todo lo medido es crudo.";
 }
 
 function resetCalibration() {
@@ -427,9 +428,9 @@ function frameLoop(now) {
   analysisContext.drawImage(video, 0, 0, analysisCanvas.width, analysisCanvas.height);
   const imageData = analysisContext.getImageData(0, 0, analysisCanvas.width, analysisCanvas.height);
   const metrics = segmentFrame(imageData, calibration);
-  updateHud(metrics);
   lastMetrics = currentMetrics;
   currentMetrics = metrics;
+  updateHud(metrics);
 }
 
 function hudLinesForPhoto() {
@@ -487,9 +488,7 @@ resetButton.addEventListener("click", resetCalibration);
 photoButton.addEventListener("click", takePhoto);
 
 window.addEventListener("amura-camera-state", (event) => {
-  if (!event.detail || event.detail.status !== "live") {
-    resetCalibration();
-  }
+  if (!event.detail || event.detail.status !== "live") resetCalibration();
 });
 
 resetCalibration();
