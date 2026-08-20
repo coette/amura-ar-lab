@@ -8,13 +8,13 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="AMURA AR">
     <meta name="mobile-web-app-capable" content="yes">
-    <title>Amura AR · AR-04 · PIVOT MUÑECA</title>
+    <title>Amura AR · AR-04 · EJE REAL</title>
     <link rel="manifest" href="manifest.webmanifest?v=11.2">
     <link rel="icon" href="icon.svg" type="image/svg+xml">
     <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
     <link rel="stylesheet" href="styles.css?v=11.2">
     <style>
-      /* Corredor solo durante calibración. Después: Hands + pivot centro muñeca. */
+      /* Corredor solo durante calibración. Después: Hands + eje 3D calibrado. */
       #tunerRoot,
       #trackingCanvas,
       #metricDepthHud { display: none !important; }
@@ -41,7 +41,7 @@
     <script type="importmap">
       {
         "imports": {
-          "./wrist-watch.js?v=11.2": "./wrist-watch-guided-pivot.js?v=pivot.1",
+          "./wrist-watch.js?v=11.2": "./wrist-watch-axis-calibrated.js?v=axis.1",
           "./wrist-watch.js?v=ar02.2": "./wrist-watch.js?v=ar03.1-base",
           "./wrist-stabilizer.js?v=11.2": "./wrist-stabilizer.js?v=11.3.0",
           "./tuner.js?v=11.2": "./tuner.js?v=11.3.0",
@@ -52,11 +52,11 @@
     </script>
     <script src="watch-x-control.js?v=ar04pivot.1" type="module"></script>
     <script src="wrist-mode-control.js?v=ar03.4" type="module"></script>
-    <script src="hand-tracking.js?v=ar04pivot.1" type="module"></script>
+    <script src="hand-tracking.js?v=ar04axis.1" type="module"></script>
   </head>
   <body data-status="idle" data-facing="environment" data-tracking="idle" data-calibrating="true">
     <main class="camera-lab">
-      <div id="ar04Marker">AR-04 · CALIBRACIÓN</div>
+      <div id="ar04Marker">AR-04 · CALIBRACIÓN EJE</div>
       <video
         id="cameraVideo"
         class="camera-video"
@@ -80,7 +80,7 @@
       <header class="topbar" style="display:none !important">
         <div>
           <p class="brand">AMURA</p>
-          <p class="phase">AR-04 · PIVOT MUÑECA</p>
+          <p class="phase">AR-04 · EJE REAL</p>
         </div>
         <div class="status-pill" role="status" aria-live="polite">
           <span class="status-dot" aria-hidden="true"></span>
@@ -101,12 +101,12 @@
 
       <section id="startPanel" class="start-card" aria-labelledby="cameraTitle">
         <p class="eyebrow">PRUEBA DE MUÑECA</p>
-        <h1 id="cameraTitle">AR-04 · PIVOT MUÑECA</h1>
+        <h1 id="cameraTitle">AR-04 · EJE REAL</h1>
         <p id="statusMessage" class="lead">
-          Alinea las líneas con tu antebrazo y pulsa LISTO. Después el corredor se apaga por completo.
+          Pon la muñeca de frente, ciñe las líneas azules al antebrazo y pulsa LISTO. Después el corredor se apaga por completo.
         </p>
         <p class="privacy">
-          MediaPipe Hands mueve el reloj. La guía tenue solo orienta al usuario.
+          Las líneas fijan el centro del antebrazo. MediaPipe Hands mueve el reloj después de calibrar.
         </p>
         <p id="installHint" class="install-hint">
           SIN BARRAS EN IPHONE/IPAD: COMPARTIR → AÑADIR A PANTALLA DE INICIO
