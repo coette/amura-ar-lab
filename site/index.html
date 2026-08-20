@@ -8,18 +8,18 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="AMURA AR">
     <meta name="mobile-web-app-capable" content="yes">
-    <title>Amura AR · AR-04 · PRUEBA P0 ↔ EJE</title>
+    <title>Amura AR · AR-04 · CORREDOR REAL AR-03</title>
     <link rel="manifest" href="manifest.webmanifest?v=11.2">
     <link rel="icon" href="icon.svg" type="image/svg+xml">
     <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
     <link rel="stylesheet" href="styles.css?v=11.2">
     <style>
-      /* Prueba temporal AR-04: todo el sistema sigue activo, pero la vista queda limpia. */
+      /* Prueba temporal AR-04: muestra literalmente el corredor real de AR-03. */
       #tunerRoot { display: none !important; }
       #trackingCanvas,
-      #forearmEdgeCanvas,
       #metricDepthHud,
       .controls { display: none !important; }
+      #forearmEdgeCanvas { z-index: 99980 !important; }
       #ar04Marker {
         position: absolute;
         top: calc(env(safe-area-inset-top, 0px) + 8px);
@@ -51,11 +51,11 @@
     <script src="watch-x-control.js?v=ar03.4" type="module"></script>
     <script src="wrist-mode-control.js?v=ar03.4" type="module"></script>
     <script src="hand-tracking.js?v=ar04p0.1" type="module"></script>
-    <script src="p0-axis-test.js?v=ar04p0.1" type="module"></script>
+    <script src="p0-axis-test.js?v=ar04p0.2" type="module"></script>
   </head>
   <body data-status="idle" data-facing="environment" data-tracking="idle">
     <main class="camera-lab">
-      <div id="ar04Marker">AR-04 · PRUEBA P0 ↔ EJE</div>
+      <div id="ar04Marker">AR-04 · CORREDOR REAL AR-03</div>
       <video
         id="cameraVideo"
         class="camera-video"
@@ -79,7 +79,7 @@
       <header class="topbar" style="display:none !important">
         <div>
           <p class="brand">AMURA</p>
-          <p class="phase">AR-04 · PRUEBA P0 ↔ EJE</p>
+          <p class="phase">AR-04 · CORREDOR REAL AR-03</p>
         </div>
         <div class="status-pill" role="status" aria-live="polite">
           <span class="status-dot" aria-hidden="true"></span>
@@ -99,13 +99,13 @@
       </div>
 
       <section id="startPanel" class="start-card" aria-labelledby="cameraTitle">
-        <p class="eyebrow">PRUEBA DE ANCLAJE</p>
-        <h1 id="cameraTitle">AR-04 · P0 ↔ EJE ANTEBRAZO</h1>
+        <p class="eyebrow">PRUEBA DE CORREDOR</p>
+        <h1 id="cameraTitle">AR-04 · CORREDOR REAL AR-03</h1>
         <p id="statusMessage" class="lead">
-          Sin reloj: mide si P0 cambia de sitio respecto al eje real del antebrazo durante el giro 0°→180°.
+          Sin segundo cálculo: muestra exactamente el corredor que usa δ en AR-03 y su estado real.
         </p>
         <p class="privacy">
-          Solo cuenta las muestras donde el corredor es válido y usa las secciones alejadas de P0.
+          El análisis ocurre en este dispositivo. Este laboratorio no almacena imágenes.
         </p>
         <p id="installHint" class="install-hint">
           SIN BARRAS EN IPHONE/IPAD: COMPARTIR → AÑADIR A PANTALLA DE INICIO
