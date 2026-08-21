@@ -1,0 +1,86 @@
+name: R18.1.2 anchor cloud plane to live P0
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/fix-r1812-p0-plane.yml'
+  workflow_dispatch:
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Anchor autonomous cloud longitudinally to live P0
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+
+          p = Path('site/forearm-mask-lab-v2.js')
+          s = p.read_text()
+
+          marker = '''function currentRoll() {\n'''
+          helper = '''function anchorGeometryLongitudinallyToPoint(geometry, point) {\n  if (!geometry?.origin || !geometry?.elbow || !point) return geometry;\n  const dx = point.x - geometry.origin.x;\n  const dy = point.y - geometry.origin.y;\n  const along = dx * geometry.elbow.x + dy * geometry.elbow.y;\n  if (!Number.isFinite(along)) return geometry;\n  return {\n    ...geometry,\n    origin: {\n      x: geometry.origin.x + geometry.elbow.x * along,\n      y: geometry.origin.y + geometry.elbow.y * along\n    },\n    roiStart: 0\n  };\n}\n\n'''
+          if 'function anchorGeometryLongitudinallyToPoint' not in s:
+              if marker not in s:
+                  raise SystemExit('currentRoll marker not found')
+              s = s.replace(marker, helper + marker, 1)
+
+          old = '''  const p0Cut = currentP0Cut(width, height, calibrationState);\n  const p0CutT = p0Cut ? coordinatesInGeometry(p0Cut.point.x, p0Cut.point.y, geometry).t : null;\n'''
+          new = '''  const p0Cut = currentP0Cut(width, height, calibrationState);\n  // P0 is allowed to correct only the longitudinal wrist station.\n  // It never drags the cloud laterally: the transverse position remains autonomous.\n  // With live P0, t=0 is therefore a 2D plane that passes through P0 every frame.\n  if (p0Cut?.source === "VIVO") {\n    geometry = anchorGeometryLongitudinallyToPoint(geometry, p0Cut.point);\n    calibrationState.geometry = geometry;\n  }\n  const p0CutT = p0Cut ? coordinatesInGeometry(p0Cut.point.x, p0Cut.point.y, geometry).t : null;\n'''
+          if old not in s:
+              raise SystemExit('segment P0 block not found')
+          s = s.replace(old, new, 1)
+
+          old = '''  const centers = collectSliceCenters(points, geometry);\n  if (centers.length >= 3) {\n    geometry = updateGeometryFromCloud(geometry, centers);\n    calibrationState.geometry = geometry;\n    calibrationState.lastGoodAt = performance.now();\n  }\n'''
+          new = '''  const centers = collectSliceCenters(points, geometry);\n  if (centers.length >= 3) {\n    geometry = updateGeometryFromCloud(geometry, centers);\n    // Fitting a new axis can move the historical origin along that axis.\n    // Re-impose the live P0 plane after the fit so the next frame cannot inherit drift.\n    if (p0Cut?.source === "VIVO") {\n      geometry = anchorGeometryLongitudinallyToPoint(geometry, p0Cut.point);\n    }\n    calibrationState.geometry = geometry;\n    calibrationState.lastGoodAt = performance.now();\n  }\n'''
+          if old not in s:
+              raise SystemExit('geometry update block not found')
+          s = s.replace(old, new, 1)
+
+          old = '''    axisCenters: centers.length,\n    p0CutSource: p0Cut ? p0Cut.source : "SIN P0"\n'''
+          new = '''    axisCenters: centers.length,\n    p0CutSource: p0Cut ? p0Cut.source : "SIN P0",\n    p0CutErrorPx: Number.isFinite(p0CutT) ? Math.abs(p0CutT) : null\n'''
+          if old not in s:
+              raise SystemExit('metrics P0 block not found')
+          s = s.replace(old, new, 1)
+
+          old = '''  maskStateValue.textContent = "NUBE AUTÓNOMA · P0 " + metrics.p0CutSource + " · " + metrics.axisCenters + "/5 CENTROS";\n'''
+          new = '''  const cutText = Number.isFinite(metrics.p0CutErrorPx) ? " · CORTE " + metrics.p0CutErrorPx.toFixed(1) + "px" : "";\n  maskStateValue.textContent = "NUBE AUTÓNOMA · P0 " + metrics.p0CutSource + cutText + " · " + metrics.axisCenters + "/5 CENTROS";\n'''
+          if old not in s:
+              raise SystemExit('HUD P0 block not found')
+          s = s.replace(old, new, 1)
+
+          p.write_text(s)
+
+          idx = Path('site/index.html')
+          h = idx.read_text()
+          if 'R18.1.1' not in h:
+              raise SystemExit('index is not R18.1.1')
+          h = h.replace('R18.1.1', 'R18.1.2').replace('r18.1.1', 'r18.1.2')
+          idx.write_text(h)
+
+          entry = Path('site/wrist-watch-entry-r181.js')
+          e = entry.read_text()
+          e = e.replace('?v=r18.1.1', '?v=r18.1.2')
+          entry.write_text(e)
+
+          # Sanity checks.
+          out = p.read_text()
+          assert 'anchorGeometryLongitudinallyToPoint' in out
+          assert 'p0Cut?.source === "VIVO"' in out
+          assert 'p0CutErrorPx' in out
+          assert 'CORTE ' in out
+          assert 'R18.1.2' in idx.read_text()
+          print('R18.1.2 P0-plane anchor patch OK')
+          PY
+
+      - name: Commit R18.1.2
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add site/forearm-mask-lab-v2.js site/index.html site/wrist-watch-entry-r181.js
+          git commit -m 'R18.1.2 anchor cloud hand-side plane to live P0'
+          git push
