@@ -1,0 +1,69 @@
+name: Export R18 complete ZIPs
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/export-r18-zips.yml'
+  workflow_dispatch:
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout exact main
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Build deployable site
+        run: npm run build
+
+      - name: Record revision and manifests
+        shell: bash
+        run: |
+          set -euo pipefail
+          SHA=$(git rev-parse HEAD)
+          printf 'AMURA AR export\nCommit: %s\nGenerated: %s\n' "$SHA" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > EXPORT_INFO.txt
+          find . -type f -not -path './.git/*' -not -name 'AMURA_R18.1_FULL_PROJECT.zip' -not -name 'AMURA_R18.1_CLOUDFLARE_READY.zip' -print0 | sort -z | xargs -0 sha256sum > FULL_PROJECT_SHA256.txt
+          (cd dist && find . -type f -print0 | sort -z | xargs -0 sha256sum) > CLOUDFLARE_READY_SHA256.txt
+          test -f dist/index.html
+          grep -q 'R18.1.0' dist/index.html
+
+      - name: Create complete source ZIP for Claude
+        shell: bash
+        run: |
+          set -euo pipefail
+          zip -r -9 AMURA_R18.1_FULL_PROJECT.zip . \
+            -x '.git/*' \
+            -x 'AMURA_R18.1_FULL_PROJECT.zip' \
+            -x 'AMURA_R18.1_CLOUDFLARE_READY.zip'
+
+      - name: Create Cloudflare-ready ZIP
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd dist
+          zip -r -9 ../AMURA_R18.1_CLOUDFLARE_READY.zip .
+          cd ..
+          unzip -l AMURA_R18.1_CLOUDFLARE_READY.zip | grep -q ' index.html$'
+
+      - name: Upload both ZIPs and checksums
+        uses: actions/upload-artifact@v4
+        with:
+          name: AMURA_R18.1_EXPORT
+          path: |
+            AMURA_R18.1_FULL_PROJECT.zip
+            AMURA_R18.1_CLOUDFLARE_READY.zip
+            EXPORT_INFO.txt
+            FULL_PROJECT_SHA256.txt
+            CLOUDFLARE_READY_SHA256.txt
+          if-no-files-found: error
+          retention-days: 7
