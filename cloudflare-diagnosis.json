@@ -1,11 +1,10 @@
 {
-  "generatedAt": "2026-08-21T04:36:54Z",
-  "revision": "R18.1.1",
+  "generatedAt": "2026-08-21T04:55:23Z",
+  "revision": "R18.1.2",
   "deploymentCount": 1,
-  "activeDeployment": "bc7b6377-e5f6-487c-9b87-fc70f19e0cde",
-  "publicHtmlR1811": true,
-  "bankBootOnlyEnsure": true,
-  "bankHasOldR16": false,
-  "bankHasOldR16Title": false,
-  "axisHasOldR16Hint": false
+  "activeDeployment": "74306bfc-6251-4b95-9eba-b452dd12bd3b",
+  "publicHtmlR1812": true,
+  "p0AnchorHelperServed": true,
+  "liveP0AnchorServed": true,
+  "p0CutDiagnosticServed": true
 }
