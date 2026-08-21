@@ -34,6 +34,9 @@ jobs:
             const project = process.env.CLOUDFLARE_PROJECT_NAME;
             if (!token || !accountId || !project) throw new Error('Faltan credenciales/configuración de Cloudflare');
 
+            // Give the production deploy triggered just before this diagnostic time to finish.
+            await new Promise(resolve => setTimeout(resolve, 25000));
+
             const headers = { Authorization: `Bearer ${token}` };
             const api = `https://api.cloudflare.com/client/v4/accounts/${accountId}/pages/projects/${project}`;
 
@@ -58,7 +61,7 @@ jobs:
                   finalUrl: r.url,
                   title,
                   eyebrow,
-                  hasR171: text.includes('R17.1'),
+                  hasR181: text.includes('R18.1.0'),
                   hasR17: text.includes('R17'),
                   hasR16: text.includes('R16'),
                   bytes: text.length,
@@ -80,7 +83,7 @@ jobs:
             const localSite = fs.readFileSync('site/index.html','utf8');
             const localDist = fs.readFileSync('dist/index.html','utf8');
             const proj = (await cf(api)).result;
-            const listBody = await cf(`${api}/deployments?page=1&per_page=20`);
+            const listBody = await cf(`${api}/deployments`);
             const deployments = listBody.result || [];
 
             const publicUrl = 'https://amura-engine-2.pages.dev/';
@@ -91,8 +94,8 @@ jobs:
                 siteTitle: (localSite.match(/<title>([^<]*)<\/title>/i)||[])[1] || null,
                 distTitle: (localDist.match(/<title>([^<]*)<\/title>/i)||[])[1] || null,
                 siteEqualsDist: localSite === localDist,
-                siteHasR171: localSite.includes('R17.1'),
-                distHasR171: localDist.includes('R17.1')
+                siteHasR181: localSite.includes('R18.1.0'),
+                distHasR181: localDist.includes('R18.1.0')
               },
               project: {
                 name: proj?.name,
@@ -110,6 +113,7 @@ jobs:
               },
               publicMainBare: await inspectUrl(publicUrl, false),
               publicMainBusted: await inspectUrl(publicUrl, true),
+              deploymentCount: Number(listBody?.result_info?.total_count || deployments.length),
               deployments: []
             };
 
