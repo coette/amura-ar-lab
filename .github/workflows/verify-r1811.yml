@@ -1,6 +1,5 @@
-name: Verify R18.1.1 production
+name: Verify R18.1.2 production
 
-# rerun after corrected production deploy
 on:
   push:
     branches: [main]
@@ -21,14 +20,13 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
           set -u
-          sleep 20
+          sleep 15
           BASE='https://amura-engine-2.pages.dev'
           API="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/amura-engine-2"
           AUTH="Authorization: Bearer $CLOUDFLARE_API_TOKEN"
 
-          HTML=$(curl -sS "$BASE/?verify=r1811" || true)
-          BANK=$(curl -sS "$BASE/static-bank-player-r16.js?v=r18.1.1" || true)
-          AXIS=$(curl -sS "$BASE/axis-r16-live.js?v=r18.1.1" || true)
+          HTML=$(curl -sS "$BASE/?verify=r1812" || true)
+          MASK=$(curl -sS "$BASE/forearm-mask-lab-v2.js?v=r18.1.2" || true)
           LIST=$(curl -sS "$API/deployments" -H "$AUTH" || true)
           PROJECT=$(curl -sS "$API" -H "$AUTH" || true)
 
@@ -36,22 +34,20 @@ jobs:
           ACTIVE=$(printf '%s' "$PROJECT" | jq -r '.result.latest_deployment.id // ""' 2>/dev/null || true)
 
           contains(){ printf '%s' "$1" | grep -Fq "$2" && echo true || echo false; }
-          HTML_R1811=$(contains "$HTML" 'R18.1.1')
-          BOOT_OK=$(contains "$BANK" 'function boot(){ensure();}')
-          BANK_OLD=$(contains "$BANK" 'LABORATORIO · R16')
-          BANK_OLD_TITLE=$(contains "$BANK" 'document.title="AMURA · R16"')
-          AXIS_OLD=$(contains "$AXIS" 'R16 OFICIAL · VERDE:')
+          HTML_OK=$(contains "$HTML" 'R18.1.2')
+          HELPER_OK=$(contains "$MASK" 'function anchorGeometryLongitudinallyToPoint')
+          LIVE_OK=$(contains "$MASK" 'p0Cut?.source === "VIVO"')
+          ERROR_OK=$(contains "$MASK" 'p0CutErrorPx')
 
           jq -n \
             --arg generatedAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
             --arg active "$ACTIVE" \
             --argjson deploymentCount "${COUNT:--1}" \
-            --argjson publicHtmlR1811 "$HTML_R1811" \
-            --argjson bankBootOnlyEnsure "$BOOT_OK" \
-            --argjson bankHasOldR16 "$BANK_OLD" \
-            --argjson bankHasOldR16Title "$BANK_OLD_TITLE" \
-            --argjson axisHasOldR16Hint "$AXIS_OLD" \
-            '{generatedAt:$generatedAt,revision:"R18.1.1",deploymentCount:$deploymentCount,activeDeployment:$active,publicHtmlR1811:$publicHtmlR1811,bankBootOnlyEnsure:$bankBootOnlyEnsure,bankHasOldR16:$bankHasOldR16,bankHasOldR16Title:$bankHasOldR16Title,axisHasOldR16Hint:$axisHasOldR16Hint}' \
+            --argjson publicHtmlR1812 "$HTML_OK" \
+            --argjson p0AnchorHelperServed "$HELPER_OK" \
+            --argjson liveP0AnchorServed "$LIVE_OK" \
+            --argjson p0CutDiagnosticServed "$ERROR_OK" \
+            '{generatedAt:$generatedAt,revision:"R18.1.2",deploymentCount:$deploymentCount,activeDeployment:$active,publicHtmlR1812:$publicHtmlR1812,p0AnchorHelperServed:$p0AnchorHelperServed,liveP0AnchorServed:$liveP0AnchorServed,p0CutDiagnosticServed:$p0CutDiagnosticServed}' \
             > cloudflare-diagnosis.json
           cat cloudflare-diagnosis.json
 
@@ -60,5 +56,5 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add cloudflare-diagnosis.json
-          git commit -m 'Record R18.1.1 runtime verification' || exit 0
+          git commit -m 'Record R18.1.2 runtime verification' || exit 0
           git push
