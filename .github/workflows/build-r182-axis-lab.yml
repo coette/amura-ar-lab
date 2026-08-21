@@ -3,8 +3,6 @@ name: Build R18.2 virtual axis lab
 on:
   push:
     branches: [main]
-    paths:
-      - '.github/workflows/build-r182-axis-lab.yml'
   workflow_dispatch:
 
 jobs:
@@ -72,11 +70,11 @@ function updateWristAppearance() {
           new = '''  wristOccluder.rotation.set(0, 0, Math.PI / 2);
   wristRig.add(wristOccluder);
 
-  const axisGeometry = new CylinderGeometry(0.75, 0.75, WRIST_LENGTH_MM + 50, 10);
+  const axisGeometry = new CylinderGeometry(0.75, 0.75, WRIST_LENGTH_MM + 90, 10);
   const axisMaterial = new MeshBasicMaterial({
     color: 0xff38d1,
     transparent: true,
-    opacity: 0.98,
+    opacity: 1,
     depthTest: false,
     depthWrite: false
   });
@@ -115,9 +113,6 @@ function updateWristAppearance() {
   const posAlpha = recovery ? 0.16 : 0.46;
   const rotAlpha = recovery ? 0.14 : 0.42;
 
-  // Y/Z are offsets of the entire rigid wrist+watch rig, expressed in the
-  // virtual wrist frame. Rotating the offset with the wrist quaternion lets
-  // the selected virtual axis act as the pivot instead of the caseback origin.
   const qForOffset = quaternion || wristRig.quaternion;
   rigOffsetLocal.set(0, axisOffsetYmm, axisOffsetZmm);
   rigOffsetWorld.copy(rigOffsetLocal).applyQuaternion(qForOffset);
