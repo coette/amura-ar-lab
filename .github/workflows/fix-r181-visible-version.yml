@@ -1,0 +1,83 @@
+name: Fix R18.1 visible version labels
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/fix-r181-visible-version.yml'
+  workflow_dispatch:
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch only visible R16 labels and bump cache key
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+
+          def replace(path, pairs):
+              p = Path(path)
+              s = p.read_text()
+              original = s
+              for old, new in pairs:
+                  if old not in s:
+                      print(f'WARN missing in {path}: {old}')
+                  s = s.replace(old, new)
+              if s == original:
+                  raise SystemExit(f'No changes made to {path}')
+              p.write_text(s)
+
+          replace('site/static-bank-player-r16.js', [
+              ('AMURA · R16 · POSTURA', 'AMURA · R18.1 · POSTURA'),
+              ('AMURA_R16_', 'AMURA_R18_1_'),
+              ('AMURA R16 · banco oficial', 'AMURA R18.1 · banco oficial'),
+              ('R16 · MÉTODO OFICIAL VERDE/NARANJA', 'R18.1 · BANCO GEOMÉTRICO VERDE/NARANJA'),
+              ('AMURA · BANCO OFICIAL · R16', 'AMURA · BANCO OFICIAL · R18.1.1'),
+              ('AMURA · R16', 'AMURA · WRIST RIG · R18.1.1'),
+              ('LABORATORIO · R16', 'LABORATORIO · R18.1.1'),
+              ('MÉTODO OFICIAL VERDE / NARANJA', 'RELOJ + MUÑECA SOBRE R17.2'),
+              ('Cámara y banco usan ya el mismo método ganador.', 'Rig rígido AR-02 sobre el eje naranja. Z calibrada una vez al pulsar LISTO.'),
+              ('VERDE: eje por secciones · NARANJA: final con 5 cortes y 4 centros.', 'Muñeca transparente por defecto · cuatro modos · autorrescate compartido por todo el rig.'),
+          ])
+
+          replace('site/axis-r16-live.js', [
+              ('R16 OFICIAL · VERDE: eje por secciones · NARANJA: final 5 cortes / 4 centros',
+               'R18.1 · VERDE: eje por secciones · NARANJA: final 5 cortes / 4 centros'),
+          ])
+
+          replace('site/wrist-watch-entry-r181.js', [
+              ('?v=r18.1.0', '?v=r18.1.1'),
+          ])
+
+          replace('site/index.html', [
+              ('R18.1.0', 'R18.1.1'),
+              ('?v=r18.1.0', '?v=r18.1.1'),
+          ])
+
+          # Sanity checks: no old visible identity remains in the two offending modules.
+          bank = Path('site/static-bank-player-r16.js').read_text()
+          axis = Path('site/axis-r16-live.js').read_text()
+          forbidden = [
+              'LABORATORIO · R16',
+              'document.title="AMURA · R16"',
+              'R16 · MÉTODO OFICIAL VERDE/NARANJA',
+              'R16 OFICIAL · VERDE:'
+          ]
+          joined = bank + '\n' + axis
+          bad = [x for x in forbidden if x in joined]
+          if bad:
+              raise SystemExit('Visible R16 labels remain: ' + repr(bad))
+          print('R18.1.1 visible-label patch OK')
+          PY
+
+      - name: Commit corrected R18.1.1
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add site/static-bank-player-r16.js site/axis-r16-live.js site/wrist-watch-entry-r181.js site/index.html
+          git commit -m 'R18.1.1 stop R16 modules from relabeling UI'
+          git push
