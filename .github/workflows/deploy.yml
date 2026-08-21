@@ -5,6 +5,10 @@ on:
     branches: [main]
   workflow_dispatch:
 
+concurrency:
+  group: amura-engine-2-production
+  cancel-in-progress: false
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -28,3 +32,85 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           command: pages deploy dist --project-name=amura-engine-2 --branch=main
+
+      - name: Keep only active production deployment
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_PROJECT_NAME: amura-engine-2
+        run: |
+          node <<'NODE'
+          const token = process.env.CLOUDFLARE_API_TOKEN;
+          const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
+          const project = process.env.CLOUDFLARE_PROJECT_NAME;
+          if (!token || !accountId || !project) throw new Error('Faltan credenciales/configuración de Cloudflare');
+
+          const headers = {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          };
+          const projectUrl = `https://api.cloudflare.com/client/v4/accounts/${accountId}/pages/projects/${project}`;
+          const deploymentsUrl = `${projectUrl}/deployments`;
+
+          async function cf(url, options = {}) {
+            const response = await fetch(url, {
+              ...options,
+              headers: { ...headers, ...(options.headers || {}) }
+            });
+            const text = await response.text();
+            let body = null;
+            try { body = text ? JSON.parse(text) : null; } catch (_) {}
+            if (!response.ok || (body && body.success === false)) {
+              const detail = body?.errors?.map(e => e.message).join('; ') || text || String(response.status);
+              throw new Error(`${response.status} ${detail}`);
+            }
+            return body;
+          }
+
+          (async () => {
+            // Give Pages a moment to promote the direct upload as active production.
+            await new Promise(resolve => setTimeout(resolve, 7000));
+
+            const projectBody = await cf(projectUrl);
+            const activeId = projectBody?.result?.latest_deployment?.id;
+            if (!activeId) throw new Error('Cloudflare no devolvió latest_deployment');
+            console.log(`Producción activa que se conserva: ${activeId}`);
+
+            const deployments = [];
+            for (let page = 1; page <= 50; page++) {
+              const body = await cf(`${deploymentsUrl}?page=${page}&per_page=100`);
+              const batch = Array.isArray(body?.result) ? body.result : [];
+              deployments.push(...batch);
+              const totalPages = Number(body?.result_info?.total_pages || 0);
+              if (!batch.length || (totalPages && page >= totalPages) || batch.length < 100) break;
+            }
+
+            deployments.sort((a, b) => new Date(b.created_on || 0) - new Date(a.created_on || 0));
+            console.log(`Implementaciones encontradas: ${deployments.length}`);
+
+            let deleted = 0;
+            let failed = 0;
+            for (const deployment of deployments) {
+              if (!deployment?.id || deployment.id === activeId) continue;
+              try {
+                await cf(`${deploymentsUrl}/${deployment.id}?force=true`, { method: 'DELETE' });
+                deleted++;
+                console.log(`BORRADA ${deployment.id}`);
+              } catch (error) {
+                // If Cloudflare says another deployment is active, never force past that protection.
+                if (/active production deployment/i.test(String(error.message))) {
+                  console.log(`PROTEGIDA POR CLOUDFLARE ${deployment.id}`);
+                  continue;
+                }
+                failed++;
+                console.log(`NO BORRADA ${deployment.id}: ${error.message}`);
+              }
+            }
+
+            console.log(`Limpieza terminada: conservada=1, borradas=${deleted}, fallidas=${failed}`);
+            if (failed) process.exitCode = 1;
+          })().catch(error => {
+            console.error(error);
+            process.exit(1);
+          });
+          NODE
