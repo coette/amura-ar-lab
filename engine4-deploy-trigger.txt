@@ -1,3 +1,4 @@
-Deploy Engine 4 R1.3
+Deploy Engine 4 R1.4
 Source: coette/amura-engine-4 main
-Trigger: 2026-08-21T09:39Z
+Source SHA: 1afb6cfb835d5450092633f8e1aa9a124e6e3659
+Trigger: 2026-08-21T09:53Z
