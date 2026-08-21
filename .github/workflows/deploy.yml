@@ -18,10 +18,187 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Apply R18.2 virtual-axis lab once
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          p = Path('site/wrist-watch-rig-r18.js')
+          s = p.read_text()
+          if 'const REVISION = "R18.2.0";' not in s:
+              def rep(old, new, count=1):
+                  global s
+                  if old not in s:
+                      raise SystemExit('pattern not found: ' + old[:120])
+                  s = s.replace(old, new, count)
+
+              rep('  CapsuleGeometry,\n  DirectionalLight,', '  CapsuleGeometry,\n  CylinderGeometry,\n  DirectionalLight,')
+              rep('const REVISION = "R18.0.0";\nconst MODEL_URL = "./models/A1-Irontide-AR-pretty-mobile.glb?v=r18.0.0";\nconst MODEL_CONFIG_URL = "./models/A1-Irontide-AR-pretty-mobile.json?v=r18.0.0";', 'const REVISION = "R18.2.0";\nconst MODEL_URL = "./models/A1-Irontide-AR-pretty-mobile.glb?v=r18.2.0";\nconst MODEL_CONFIG_URL = "./models/A1-Irontide-AR-pretty-mobile.json?v=r18.2.0";')
+              rep('const contactWorldPosition = new Vector3();', 'const contactWorldPosition = new Vector3();\nconst rigOffsetLocal = new Vector3();\nconst rigOffsetWorld = new Vector3();')
+              rep('let wristMaterial = null;\nlet modelConfig', 'let wristMaterial = null;\nlet virtualWristAxis = null;\nlet modelConfig')
+              rep('let contactOffsetInAnchor = new Vector3();', 'let contactOffsetInAnchor = new Vector3();\nlet watchAnchorBasePosition = new Vector3();\nlet axisOffsetYmm = 0;\nlet axisOffsetZmm = 0;\nlet watchCycleState = 0;')
+
+              rep('''function updateWristAppearance() {
+  if (!wristOccluder || !wristMaterial) return;
+  wristOccluder.visible = wristMode !== 0;
+
+  if (wristMode !== appliedWristMode) {
+''', '''function applyWatchCycle() {
+  if (!watchAnchor || !watchModel) return;
+  watchAnchor.position.copy(watchAnchorBasePosition);
+  if (watchCycleState === 1) watchAnchor.position.x -= 24;
+  watchModel.visible = watchCycleState !== 2;
+  const button = document.getElementById("r18WatchCycleButton");
+  if (button) button.textContent = watchCycleState === 0 ? "RELOJ X 0" : watchCycleState === 1 ? "RELOJ X −24" : "RELOJ OCULTO";
+}
+
+function updateWristAppearance() {
+  if (!wristOccluder || !wristMaterial) return;
+  wristOccluder.visible = wristMode !== 0;
+
+  if (wristMode !== appliedWristMode) {
+''')
+              rep('  if (watchModel) watchModel.visible = true;\n}', '  applyWatchCycle();\n}', 1)
+
+              rep('''  wristOccluder.rotation.set(0, 0, Math.PI / 2);
+  wristRig.add(wristOccluder);
+
+  scene.add(wristRig);
+''', '''  wristOccluder.rotation.set(0, 0, Math.PI / 2);
+  wristRig.add(wristOccluder);
+
+  const axisGeometry = new CylinderGeometry(0.75, 0.75, WRIST_LENGTH_MM + 90, 10);
+  const axisMaterial = new MeshBasicMaterial({ color: 0xff38d1, transparent: true, opacity: 1, depthTest: false, depthWrite: false });
+  virtualWristAxis = new Mesh(axisGeometry, axisMaterial);
+  virtualWristAxis.name = "AMURA_R18_VIRTUAL_WRIST_AXIS";
+  virtualWristAxis.rotation.set(0, 0, Math.PI / 2);
+  virtualWristAxis.position.set(0, 0, WRIST_THICKNESS_MM / 2);
+  virtualWristAxis.renderOrder = 10000;
+  wristRig.add(virtualWristAxis);
+
+  scene.add(wristRig);
+''')
+
+              rep('    watchAnchor.position.copy(contactOffsetInAnchor).multiplyScalar(-1);\n\n    modelStatus = "listo";', '    watchAnchor.position.copy(contactOffsetInAnchor).multiplyScalar(-1);\n    watchAnchorBasePosition.copy(watchAnchor.position);\n    applyWatchCycle();\n\n    modelStatus = "listo";')
+
+              rep('''function applyTarget(position, quaternion, now) {
+  if (!wristRig || !position) return;
+  const recovery = now < recoveryUntil;
+  const posAlpha = recovery ? 0.16 : 0.46;
+  const rotAlpha = recovery ? 0.14 : 0.42;
+
+  if (!hasRigPose) {
+    wristRig.position.copy(position);
+    if (quaternion) wristRig.quaternion.copy(quaternion);
+    hasRigPose = true;
+  } else {
+    wristRig.position.lerp(position, posAlpha);
+    if (quaternion) wristRig.quaternion.slerp(quaternion, rotAlpha);
+  }
+}
+''', '''function applyTarget(position, quaternion, now) {
+  if (!wristRig || !position) return;
+  const recovery = now < recoveryUntil;
+  const posAlpha = recovery ? 0.16 : 0.46;
+  const rotAlpha = recovery ? 0.14 : 0.42;
+  const qForOffset = quaternion || wristRig.quaternion;
+  rigOffsetLocal.set(0, axisOffsetYmm, axisOffsetZmm);
+  rigOffsetWorld.copy(rigOffsetLocal).applyQuaternion(qForOffset);
+  const adjustedPosition = position.clone().add(rigOffsetWorld);
+
+  if (!hasRigPose) {
+    wristRig.position.copy(adjustedPosition);
+    if (quaternion) wristRig.quaternion.copy(quaternion);
+    hasRigPose = true;
+  } else {
+    wristRig.position.lerp(adjustedPosition, posAlpha);
+    if (quaternion) wristRig.quaternion.slerp(quaternion, rotAlpha);
+  }
+}
+''')
+
+              rep('    units: "R18 · rig rígido muñeca + reloj · Z fija",', '    units: `R18.2 · eje virtual · Y ${axisOffsetYmm.toFixed(1)} · Z ${axisOffsetZmm.toFixed(1)}`,')
+
+              rep('''    #r18WristModes button.on{
+      background:rgba(0,133,164,.92);color:#fff;border-color:rgba(255,255,255,.82);
+    }
+    body[data-status="idle"] #r18WristModes,
+''', '''    #r18WristModes button.on{
+      background:rgba(0,133,164,.92);color:#fff;border-color:rgba(255,255,255,.82);
+    }
+    #r18AxisLab{position:absolute;left:10px;right:10px;bottom:calc(env(safe-area-inset-bottom,0px) + 184px);z-index:100043;padding:9px 11px;border:1px solid rgba(255,255,255,.30);border-radius:12px;background:rgba(5,10,17,.84);color:#fff;font:800 10px/1.2 Arial,sans-serif;letter-spacing:.03em;-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
+    #r18AxisLab .axis-title{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+    #r18AxisLab .axis-dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:#ff38d1;margin-right:6px;vertical-align:-1px}
+    #r18AxisLab .axis-row{display:grid;grid-template-columns:18px 1fr 58px;gap:7px;align-items:center;margin:5px 0}
+    #r18AxisLab input[type="range"]{width:100%;margin:0}
+    #r18AxisLab output{text-align:right;font-variant-numeric:tabular-nums}
+    #r18WatchCycleButton{min-height:34px;border:1px solid rgba(255,255,255,.38);border-radius:999px;padding:0 12px;background:rgba(0,133,164,.90);color:#fff;font:800 10px/1 Arial,sans-serif}
+    body[data-status="idle"] #r18WristModes,
+''')
+              rep('    body[data-status="requesting"] #r18WristModes,\n    body[data-status="idle"] #r18RigState,', '    body[data-status="requesting"] #r18WristModes,\n    body[data-status="idle"] #r18AxisLab,\n    body[data-status="requesting"] #r18AxisLab,\n    body[data-status="idle"] #r18RigState,')
+              rep('    body[data-amura-mode="bank"] #r18WristModes,\n    body[data-amura-mode="bank"] #r18RigState{display:none!important}', '    body[data-amura-mode="bank"] #r18WristModes,\n    body[data-amura-mode="bank"] #r18AxisLab,\n    body[data-amura-mode="bank"] #r18RigState{display:none!important}')
+
+              rep('''  const parent = document.querySelector(".camera-lab") || document.body;
+  parent.appendChild(stateEl);
+  parent.appendChild(root);
+}
+''', '''  const axisLab = document.createElement("div");
+  axisLab.id = "r18AxisLab";
+  axisLab.innerHTML = `<div class="axis-title"><span><span class="axis-dot"></span>EJE MUÑECA VIRTUAL</span><button id="r18WatchCycleButton" type="button">RELOJ X 0</button></div><label class="axis-row"><span>Y</span><input id="r18AxisY" type="range" min="-40" max="40" step="0.5" value="0"><output id="r18AxisYValue">0.0 mm</output></label><label class="axis-row"><span>Z</span><input id="r18AxisZ" type="range" min="-50" max="50" step="0.5" value="0"><output id="r18AxisZValue">0.0 mm</output></label>`;
+  const ySlider = axisLab.querySelector("#r18AxisY");
+  const zSlider = axisLab.querySelector("#r18AxisZ");
+  const yValue = axisLab.querySelector("#r18AxisYValue");
+  const zValue = axisLab.querySelector("#r18AxisZValue");
+  const watchButton = axisLab.querySelector("#r18WatchCycleButton");
+  const syncAxisUi = () => {
+    yValue.textContent = `${axisOffsetYmm >= 0 ? "+" : ""}${axisOffsetYmm.toFixed(1)} mm`;
+    zValue.textContent = `${axisOffsetZmm >= 0 ? "+" : ""}${axisOffsetZmm.toFixed(1)} mm`;
+  };
+  ySlider.addEventListener("input", () => { axisOffsetYmm = Number(ySlider.value) || 0; syncAxisUi(); hasRigPose = false; render(); });
+  zSlider.addEventListener("input", () => { axisOffsetZmm = Number(zSlider.value) || 0; syncAxisUi(); hasRigPose = false; render(); });
+  watchButton.addEventListener("click", () => { watchCycleState = (watchCycleState + 1) % 3; applyWatchCycle(); render(); });
+  syncAxisUi();
+  applyWatchCycle();
+
+  const parent = document.querySelector(".camera-lab") || document.body;
+  parent.appendChild(stateEl);
+  parent.appendChild(root);
+  parent.appendChild(axisLab);
+}
+''')
+              rep('      wristMode,\n      cloudWasBad,', '      wristMode,\n      axisOffsetYmm,\n      axisOffsetZmm,\n      watchCycleState,\n      cloudWasBad,')
+              p.write_text(s)
+
+          e = Path('site/wrist-watch-entry-r181.js')
+          t = e.read_text().replace('r18.1.2', 'r18.2.0')
+          e.write_text(t)
+
+          i = Path('site/index.html')
+          h = i.read_text().replace('R18.1.2', 'R18.2').replace('r18.1.2', 'r18.2.0')
+          h = h.replace('R18.1 · RIG SOBRE EJE OFICIAL', 'R18.2 · LAB EJE MUÑECA VIRTUAL')
+          h = h.replace('Rig rígido AR-02 sobre el eje naranja, ahora también en las 8 fotos estáticas.', 'Laboratorio visual: eje naranja real frente a eje magenta de muñeca virtual.')
+          h = h.replace('Cámara = dinámica · banco = geometría · mismos cuatro modos de muñeca.', 'Ajusta Y/Z del conjunto rígido y prueba el giro 0→180°.')
+          i.write_text(h)
+
+          m = Path('site/manifest.webmanifest')
+          x = m.read_text().replace('R18 Wrist Rig', 'R18.2 Axis Lab').replace('AMURA R18', 'AMURA R18.2').replace('R18: rig rígido de muñeca + reloj sobre el eje naranja R17.2.', 'R18.2: laboratorio de alineación del eje virtual de muñeca con sliders Y/Z.').replace('r18.0.0', 'r18.2.0')
+          m.write_text(x)
+          PY
+
+      - name: Persist R18.2 site files
+        run: |
+          if ! git diff --quiet -- site/; then
+            git config user.name 'github-actions[bot]'
+            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+            git add site/wrist-watch-rig-r18.js site/wrist-watch-entry-r181.js site/index.html site/manifest.webmanifest
+            git commit -m 'R18.2 virtual wrist axis YZ alignment lab'
+            git push
+          fi
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -49,36 +226,25 @@ jobs:
           API="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/$CLOUDFLARE_PROJECT_NAME"
           AUTH="Authorization: Bearer $CLOUDFLARE_API_TOKEN"
           sleep 5
-
           for round in $(seq 1 40); do
             PROJECT_JSON=$(curl -fsS "$API" -H "$AUTH")
             ACTIVE=$(printf '%s' "$PROJECT_JSON" | jq -r '.result.latest_deployment.id // empty')
             [ -n "$ACTIVE" ] || { echo 'No active deployment id'; exit 1; }
-
-            # Pages rejects per_page=100 for this endpoint/account. Use the
-            # default page and keep refreshing page 1 while deletions pull
-            # older deployments forward.
             JSON=$(curl -fsS "$API/deployments" -H "$AUTH")
             TOTAL=$(printf '%s' "$JSON" | jq -r '.result_info.total_count // (.result|length)')
             VISIBLE=$(printf '%s' "$JSON" | jq -r '.result|length')
             echo "Round $round · total=$TOTAL · visible=$VISIBLE · active=$ACTIVE"
             [ "$TOTAL" -le 1 ] && break
-
             while read -r ID; do
               [ -z "$ID" ] && continue
               [ "$ID" = "$ACTIVE" ] && continue
               RESPONSE=$(curl -sS -X DELETE "$API/deployments/$ID?force=true" -H "$AUTH")
               SUCCESS=$(printf '%s' "$RESPONSE" | jq -r '.success // false')
-              if [ "$SUCCESS" = "true" ]; then
-                echo "DELETED $ID"
-              else
-                echo "DELETE FAILED $ID :: $(printf '%s' "$RESPONSE" | jq -c '.errors // .')"
-              fi
+              if [ "$SUCCESS" = "true" ]; then echo "DELETED $ID"; else echo "DELETE FAILED $ID :: $(printf '%s' "$RESPONSE" | jq -c '.errors // .')"; fi
               sleep 0.20
             done < <(printf '%s' "$JSON" | jq -r '.result[].id')
             sleep 1
           done
-
           FINAL=$(curl -fsS "$API/deployments" -H "$AUTH")
           FINAL_TOTAL=$(printf '%s' "$FINAL" | jq -r '.result_info.total_count // (.result|length)')
           echo "FINAL TOTAL=$FINAL_TOTAL"
