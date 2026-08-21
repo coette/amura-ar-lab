@@ -1,0 +1,2 @@
+R18.1.2
+Live P0 re-anchors only the longitudinal wrist plane; transverse cloud tracking remains autonomous.
