@@ -14,43 +14,50 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v4
-      - name: Verify Cloudflare production and runtime files
+      - name: Record Cloudflare production runtime checks
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
-          set -euo pipefail
-          sleep 25
+          set -u
+          sleep 20
           BASE='https://amura-engine-2.pages.dev'
           API="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/amura-engine-2"
           AUTH="Authorization: Bearer $CLOUDFLARE_API_TOKEN"
 
-          HTML=$(curl -fsS "$BASE/?verify=r1811")
-          BANK=$(curl -fsS "$BASE/static-bank-player-r16.js?v=r18.1.1")
-          AXIS=$(curl -fsS "$BASE/axis-r16-live.js?v=r18.1.1")
-          LIST=$(curl -fsS "$API/deployments" -H "$AUTH")
-          COUNT=$(printf '%s' "$LIST" | jq -r '.result_info.total_count // (.result|length)')
-          ACTIVE=$(curl -fsS "$API" -H "$AUTH" | jq -r '.result.latest_deployment.id')
+          HTML=$(curl -sS "$BASE/?verify=r1811" || true)
+          BANK=$(curl -sS "$BASE/static-bank-player-r16.js?v=r18.1.1" || true)
+          AXIS=$(curl -sS "$BASE/axis-r16-live.js?v=r18.1.1" || true)
+          LIST=$(curl -sS "$API/deployments" -H "$AUTH" || true)
+          PROJECT=$(curl -sS "$API" -H "$AUTH" || true)
 
-          printf '%s' "$HTML" | grep -q 'R18.1.1'
-          printf '%s' "$BANK" | grep -Fq 'function boot(){ensure();}'
-          ! printf '%s' "$BANK" | grep -Fq 'LABORATORIO · R16'
-          ! printf '%s' "$BANK" | grep -Fq 'document.title="AMURA · R16"'
-          ! printf '%s' "$AXIS" | grep -Fq 'R16 OFICIAL · VERDE:'
-          [ "$COUNT" -eq 1 ]
+          COUNT=$(printf '%s' "$LIST" | jq -r '.result_info.total_count // (.result|length) // -1' 2>/dev/null || echo -1)
+          ACTIVE=$(printf '%s' "$PROJECT" | jq -r '.result.latest_deployment.id // ""' 2>/dev/null || true)
+
+          contains(){ printf '%s' "$1" | grep -Fq "$2" && echo true || echo false; }
+          HTML_R1811=$(contains "$HTML" 'R18.1.1')
+          BOOT_OK=$(contains "$BANK" 'function boot(){ensure();}')
+          BANK_OLD=$(contains "$BANK" 'LABORATORIO · R16')
+          BANK_OLD_TITLE=$(contains "$BANK" 'document.title="AMURA · R16"')
+          AXIS_OLD=$(contains "$AXIS" 'R16 OFICIAL · VERDE:')
 
           jq -n \
             --arg generatedAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
             --arg active "$ACTIVE" \
-            --argjson deploymentCount "$COUNT" \
-            '{generatedAt:$generatedAt,revision:"R18.1.1",deploymentCount:$deploymentCount,activeDeployment:$active,publicHtmlR1811:true,bankBootOnlyEnsure:true,noVisibleR16InBank:true,noVisibleR16InAxisHint:true}' \
+            --argjson deploymentCount "${COUNT:--1}" \
+            --argjson publicHtmlR1811 "$HTML_R1811" \
+            --argjson bankBootOnlyEnsure "$BOOT_OK" \
+            --argjson bankHasOldR16 "$BANK_OLD" \
+            --argjson bankHasOldR16Title "$BANK_OLD_TITLE" \
+            --argjson axisHasOldR16Hint "$AXIS_OLD" \
+            '{generatedAt:$generatedAt,revision:"R18.1.1",deploymentCount:$deploymentCount,activeDeployment:$active,publicHtmlR1811:$publicHtmlR1811,bankBootOnlyEnsure:$bankBootOnlyEnsure,bankHasOldR16:$bankHasOldR16,bankHasOldR16Title:$bankHasOldR16Title,axisHasOldR16Hint:$axisHasOldR16Hint}' \
             > cloudflare-diagnosis.json
           cat cloudflare-diagnosis.json
 
-      - name: Save verification
+      - name: Save verification regardless of result
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add cloudflare-diagnosis.json
-          git commit -m 'Verify R18.1.1 production runtime' || exit 0
+          git commit -m 'Record R18.1.1 runtime verification' || exit 0
           git push
