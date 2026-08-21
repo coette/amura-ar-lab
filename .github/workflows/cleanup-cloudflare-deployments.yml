@@ -11,113 +11,96 @@ jobs:
   cleanup:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
     steps:
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - name: Keep only active production deployment
+      - name: Delete all deployments except active production
+        id: cleanup
+        shell: bash
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_PROJECT_NAME: amura-engine-2
         run: |
-          node <<'NODE'
-          const token = process.env.CLOUDFLARE_API_TOKEN;
-          const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
-          const project = process.env.CLOUDFLARE_PROJECT_NAME;
+          set -u
+          API="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/$CLOUDFLARE_PROJECT_NAME"
+          AUTH="Authorization: Bearer $CLOUDFLARE_API_TOKEN"
+          : > cleanup-result.txt
+          echo "Started: $(date -u +%Y-%m-%dT%H:%M:%SZ)" | tee -a cleanup-result.txt
 
-          if (!token || !accountId || !project) {
-            throw new Error('Faltan credenciales/configuración de Cloudflare');
-          }
+          FAIL=0
+          for round in $(seq 1 25); do
+            PROJECT_JSON=$(curl -sS "$API" -H "$AUTH")
+            PROJECT_OK=$(printf '%s' "$PROJECT_JSON" | jq -r '.success // false')
+            if [ "$PROJECT_OK" != "true" ]; then
+              echo "PROJECT API ERROR: $(printf '%s' "$PROJECT_JSON" | jq -c '.errors // .')" | tee -a cleanup-result.txt
+              FAIL=1
+              break
+            fi
 
-          const projectUrl = `https://api.cloudflare.com/client/v4/accounts/${accountId}/pages/projects/${project}`;
-          const deploymentsUrl = `${projectUrl}/deployments`;
-          const headers = {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          };
+            ACTIVE=$(printf '%s' "$PROJECT_JSON" | jq -r '.result.latest_deployment.id // empty')
+            if [ -z "$ACTIVE" ]; then
+              echo "ERROR: no active deployment id" | tee -a cleanup-result.txt
+              FAIL=1
+              break
+            fi
 
-          const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+            JSON=$(curl -sS "$API/deployments?page=1&per_page=100" -H "$AUTH")
+            OK=$(printf '%s' "$JSON" | jq -r '.success // false')
+            if [ "$OK" != "true" ]; then
+              echo "LIST API ERROR: $(printf '%s' "$JSON" | jq -c '.errors // .')" | tee -a cleanup-result.txt
+              FAIL=1
+              break
+            fi
 
-          async function cf(url, options = {}) {
-            const res = await fetch(url, {
-              ...options,
-              headers: { ...headers, ...(options.headers || {}) }
-            });
-            const text = await res.text();
-            let body = null;
-            try { body = text ? JSON.parse(text) : null; } catch (_) {}
-            if (!res.ok || (body && body.success === false)) {
-              const detail = body?.errors?.map(e => e.message).join('; ') || text || `${res.status}`;
-              throw new Error(`${res.status} ${detail}`);
-            }
-            return body;
-          }
+            TOTAL=$(printf '%s' "$JSON" | jq -r '.result_info.total_count // (.result|length)')
+            echo "ROUND $round total=$TOTAL active=$ACTIVE" | tee -a cleanup-result.txt
+            [ "$TOTAL" -le 1 ] && break
 
-          async function listAll() {
-            const all = [];
-            for (let page = 1; page <= 30; page++) {
-              const body = await cf(`${deploymentsUrl}?page=${page}&per_page=100`);
-              const batch = Array.isArray(body?.result) ? body.result : [];
-              all.push(...batch);
-              const totalPages = Number(body?.result_info?.total_pages || 0);
-              if (!batch.length || (totalPages && page >= totalPages) || batch.length < 100) break;
-            }
-            return all;
-          }
+            while read -r ID; do
+              [ -z "$ID" ] && continue
+              [ "$ID" = "$ACTIVE" ] && continue
+              RESPONSE=$(curl -sS -X DELETE "$API/deployments/$ID?force=true" -H "$AUTH")
+              SUCCESS=$(printf '%s' "$RESPONSE" | jq -r '.success // false')
+              if [ "$SUCCESS" = "true" ]; then
+                echo "DELETED $ID" | tee -a cleanup-result.txt
+              else
+                ERR=$(printf '%s' "$RESPONSE" | jq -c '.errors // .')
+                echo "DELETE FAILED $ID :: $ERR" | tee -a cleanup-result.txt
+              fi
+              sleep 0.20
+            done < <(printf '%s' "$JSON" | jq -r '.result[].id')
+            sleep 1
+          done
 
-          async function activeProductionId() {
-            const body = await cf(projectUrl);
-            const id = body?.result?.latest_deployment?.id;
-            if (!id) throw new Error('Cloudflare no informa latest_deployment');
-            return id;
-          }
+          FINAL=$(curl -sS "$API/deployments?page=1&per_page=100" -H "$AUTH")
+          FINAL_OK=$(printf '%s' "$FINAL" | jq -r '.success // false')
+          if [ "$FINAL_OK" = "true" ]; then
+            FINAL_TOTAL=$(printf '%s' "$FINAL" | jq -r '.result_info.total_count // (.result|length)')
+            echo "FINAL TOTAL=$FINAL_TOTAL" | tee -a cleanup-result.txt
+            printf '%s' "$FINAL" | jq -r '.result[] | "REMAINING \(.id) \(.created_on) \(.environment)"' | tee -a cleanup-result.txt
+            [ "$FINAL_TOTAL" -eq 1 ] || FAIL=1
+          else
+            echo "FINAL LIST ERROR: $(printf '%s' "$FINAL" | jq -c '.errors // .')" | tee -a cleanup-result.txt
+            FAIL=1
+          fi
+          echo "Finished: $(date -u +%Y-%m-%dT%H:%M:%SZ)" | tee -a cleanup-result.txt
+          echo "fail=$FAIL" >> "$GITHUB_OUTPUT"
 
-          async function cleanupRound(label) {
-            const activeId = await activeProductionId();
-            const deployments = await listAll();
-            deployments.sort((a, b) => new Date(b.created_on || 0) - new Date(a.created_on || 0));
-            console.log(`${label}: encontrados=${deployments.length} · producción activa=${activeId}`);
+      - name: Save cleanup result
+        if: always()
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add cleanup-result.txt
+          git commit -m 'Record Cloudflare cleanup result' || exit 0
+          git push
 
-            let deleted = 0;
-            let failed = 0;
-            for (const d of deployments) {
-              if (!d?.id || d.id === activeId) continue;
-              try {
-                await cf(`${deploymentsUrl}/${d.id}?force=true`, { method: 'DELETE' });
-                deleted++;
-                console.log(`BORRADO ${d.id} · ${d.created_on || ''}`);
-              } catch (error) {
-                failed++;
-                console.log(`NO BORRADO ${d.id} · ${error.message}`);
-              }
-            }
-            console.log(`${label}: borrados=${deleted} · fallidos=${failed}`);
-            return { activeId, failed };
-          }
-
-          // Este push también dispara el deploy normal. Esperamos a que termine
-          // antes de elegir qué implementación es la producción que hay que conservar.
-          console.log('Esperando 60 s a que termine cualquier despliegue en curso...');
-          await sleep(60000);
-          await cleanupRound('RONDA 1');
-
-          // Segunda pasada para capturar cualquier deployment que hubiese terminado
-          // justo durante la primera limpieza.
-          await sleep(12000);
-          await cleanupRound('RONDA 2');
-
-          const finalActive = await activeProductionId();
-          const remaining = await listAll();
-          console.log(`FINAL: quedan=${remaining.length} · producción activa=${finalActive}`);
-          for (const d of remaining) {
-            console.log(`RESTANTE ${d.id} · ${d.created_on || ''} · ${d.environment || ''}`);
-          }
-
-          if (remaining.length !== 1 || remaining[0]?.id !== finalActive) {
-            throw new Error(`La limpieza no terminó en una sola implementación activa. Quedan ${remaining.length}.`);
-          }
-          NODE
+      - name: Require one deployment
+        if: always()
+        shell: bash
+        run: |
+          test "${{ steps.cleanup.outputs.fail }}" = "0"
