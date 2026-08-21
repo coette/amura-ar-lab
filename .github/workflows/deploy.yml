@@ -50,16 +50,21 @@ jobs:
           AUTH="Authorization: Bearer $CLOUDFLARE_API_TOKEN"
           sleep 5
 
-          for round in $(seq 1 20); do
-            ACTIVE=$(curl -fsS "$API" -H "$AUTH" | jq -r '.result.latest_deployment.id // empty')
+          for round in $(seq 1 40); do
+            PROJECT_JSON=$(curl -fsS "$API" -H "$AUTH")
+            ACTIVE=$(printf '%s' "$PROJECT_JSON" | jq -r '.result.latest_deployment.id // empty')
             [ -n "$ACTIVE" ] || { echo 'No active deployment id'; exit 1; }
 
-            JSON=$(curl -fsS "$API/deployments?page=1&per_page=100" -H "$AUTH")
+            # Pages rejects per_page=100 for this endpoint/account. Use the
+            # default page and keep refreshing page 1 while deletions pull
+            # older deployments forward.
+            JSON=$(curl -fsS "$API/deployments" -H "$AUTH")
             TOTAL=$(printf '%s' "$JSON" | jq -r '.result_info.total_count // (.result|length)')
-            echo "Round $round · total=$TOTAL · active=$ACTIVE"
+            VISIBLE=$(printf '%s' "$JSON" | jq -r '.result|length')
+            echo "Round $round · total=$TOTAL · visible=$VISIBLE · active=$ACTIVE"
             [ "$TOTAL" -le 1 ] && break
 
-            printf '%s' "$JSON" | jq -r '.result[].id' | while read -r ID; do
+            while read -r ID; do
               [ -z "$ID" ] && continue
               [ "$ID" = "$ACTIVE" ] && continue
               RESPONSE=$(curl -sS -X DELETE "$API/deployments/$ID?force=true" -H "$AUTH")
@@ -69,12 +74,12 @@ jobs:
               else
                 echo "DELETE FAILED $ID :: $(printf '%s' "$RESPONSE" | jq -c '.errors // .')"
               fi
-              sleep 0.15
-            done
+              sleep 0.20
+            done < <(printf '%s' "$JSON" | jq -r '.result[].id')
             sleep 1
           done
 
-          FINAL=$(curl -fsS "$API/deployments?page=1&per_page=100" -H "$AUTH")
+          FINAL=$(curl -fsS "$API/deployments" -H "$AUTH")
           FINAL_TOTAL=$(printf '%s' "$FINAL" | jq -r '.result_info.total_count // (.result|length)')
           echo "FINAL TOTAL=$FINAL_TOTAL"
           printf '%s' "$FINAL" | jq -r '.result[] | "REMAINING \(.id) \(.created_on) \(.environment)"'
