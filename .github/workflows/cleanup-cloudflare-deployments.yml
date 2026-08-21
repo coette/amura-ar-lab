@@ -31,7 +31,7 @@ jobs:
           echo "Started: $(date -u +%Y-%m-%dT%H:%M:%SZ)" | tee -a cleanup-result.txt
 
           FAIL=0
-          for round in $(seq 1 25); do
+          for round in $(seq 1 40); do
             PROJECT_JSON=$(curl -sS "$API" -H "$AUTH")
             PROJECT_OK=$(printf '%s' "$PROJECT_JSON" | jq -r '.success // false')
             if [ "$PROJECT_OK" != "true" ]; then
@@ -47,7 +47,10 @@ jobs:
               break
             fi
 
-            JSON=$(curl -sS "$API/deployments?page=1&per_page=100" -H "$AUTH")
+            # IMPORTANT: Cloudflare Pages rejects per_page=100 here (error 8000024).
+            # We intentionally use the endpoint with its default page size and repeat
+            # page 1 until every old deployment has been removed.
+            JSON=$(curl -sS "$API/deployments" -H "$AUTH")
             OK=$(printf '%s' "$JSON" | jq -r '.success // false')
             if [ "$OK" != "true" ]; then
               echo "LIST API ERROR: $(printf '%s' "$JSON" | jq -c '.errors // .')" | tee -a cleanup-result.txt
@@ -56,9 +59,11 @@ jobs:
             fi
 
             TOTAL=$(printf '%s' "$JSON" | jq -r '.result_info.total_count // (.result|length)')
-            echo "ROUND $round total=$TOTAL active=$ACTIVE" | tee -a cleanup-result.txt
+            VISIBLE=$(printf '%s' "$JSON" | jq -r '.result|length')
+            echo "ROUND $round total=$TOTAL visible=$VISIBLE active=$ACTIVE" | tee -a cleanup-result.txt
             [ "$TOTAL" -le 1 ] && break
 
+            DELETED_THIS_ROUND=0
             while read -r ID; do
               [ -z "$ID" ] && continue
               [ "$ID" = "$ACTIVE" ] && continue
@@ -66,16 +71,19 @@ jobs:
               SUCCESS=$(printf '%s' "$RESPONSE" | jq -r '.success // false')
               if [ "$SUCCESS" = "true" ]; then
                 echo "DELETED $ID" | tee -a cleanup-result.txt
+                DELETED_THIS_ROUND=$((DELETED_THIS_ROUND+1))
               else
                 ERR=$(printf '%s' "$RESPONSE" | jq -c '.errors // .')
                 echo "DELETE FAILED $ID :: $ERR" | tee -a cleanup-result.txt
               fi
               sleep 0.20
             done < <(printf '%s' "$JSON" | jq -r '.result[].id')
+
+            # Refresh the first page after every batch. Deletions shift later rows forward.
             sleep 1
           done
 
-          FINAL=$(curl -sS "$API/deployments?page=1&per_page=100" -H "$AUTH")
+          FINAL=$(curl -sS "$API/deployments" -H "$AUTH")
           FINAL_OK=$(printf '%s' "$FINAL" | jq -r '.success // false')
           if [ "$FINAL_OK" = "true" ]; then
             FINAL_TOTAL=$(printf '%s' "$FINAL" | jq -r '.result_info.total_count // (.result|length)')
