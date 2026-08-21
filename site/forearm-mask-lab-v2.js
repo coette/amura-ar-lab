@@ -125,6 +125,22 @@ function currentP0Cut(width, height, calibrationState) {
   return null;
 }
 
+function anchorGeometryLongitudinallyToPoint(geometry, point) {
+  if (!geometry?.origin || !geometry?.elbow || !point) return geometry;
+  const dx = point.x - geometry.origin.x;
+  const dy = point.y - geometry.origin.y;
+  const along = dx * geometry.elbow.x + dy * geometry.elbow.y;
+  if (!Number.isFinite(along)) return geometry;
+  return {
+    ...geometry,
+    origin: {
+      x: geometry.origin.x + geometry.elbow.x * along,
+      y: geometry.origin.y + geometry.elbow.y * along
+    },
+    roiStart: 0
+  };
+}
+
 function currentRoll() {
   const diagnostics = window.AmuraTrackingDiagnostics || {};
   return parseAngle(diagnostics["Giro Y muñeca"]);
@@ -537,6 +553,13 @@ function segmentFrame(imageData, calibrationState) {
   const searchStart = geometry.roiStart - geometry.roiEnd * 0.05;
   const searchEnd = geometry.roiEnd * 1.08;
   const p0Cut = currentP0Cut(width, height, calibrationState);
+  // P0 is allowed to correct only the longitudinal wrist station.
+  // It never drags the cloud laterally: the transverse position remains autonomous.
+  // With live P0, t=0 is therefore a 2D plane that passes through P0 every frame.
+  if (p0Cut?.source === "VIVO") {
+    geometry = anchorGeometryLongitudinallyToPoint(geometry, p0Cut.point);
+    calibrationState.geometry = geometry;
+  }
   const p0CutT = p0Cut ? coordinatesInGeometry(p0Cut.point.x, p0Cut.point.y, geometry).t : null;
 
   for (let y = 0; y < height; y += 1) {
@@ -571,6 +594,11 @@ function segmentFrame(imageData, calibrationState) {
   const centers = collectSliceCenters(points, geometry);
   if (centers.length >= 3) {
     geometry = updateGeometryFromCloud(geometry, centers);
+    // Fitting a new axis can move the historical origin along that axis.
+    // Re-impose the live P0 plane after the fit so the next frame cannot inherit drift.
+    if (p0Cut?.source === "VIVO") {
+      geometry = anchorGeometryLongitudinallyToPoint(geometry, p0Cut.point);
+    }
     calibrationState.geometry = geometry;
     calibrationState.lastGoodAt = performance.now();
   }
@@ -593,7 +621,8 @@ function segmentFrame(imageData, calibrationState) {
     coverage: bandCandidates > 0 ? measureCount / bandCandidates : 0,
     pixelCount: measureCount,
     axisCenters: centers.length,
-    p0CutSource: p0Cut ? p0Cut.source : "SIN P0"
+    p0CutSource: p0Cut ? p0Cut.source : "SIN P0",
+    p0CutErrorPx: Number.isFinite(p0CutT) ? Math.abs(p0CutT) : null
   };
 }
 
@@ -619,7 +648,8 @@ function updateHud(metrics) {
     return;
   }
 
-  maskStateValue.textContent = "NUBE AUTÓNOMA · P0 " + metrics.p0CutSource + " · " + metrics.axisCenters + "/5 CENTROS";
+  const cutText = Number.isFinite(metrics.p0CutErrorPx) ? " · CORTE " + metrics.p0CutErrorPx.toFixed(1) + "px" : "";
+  maskStateValue.textContent = "NUBE AUTÓNOMA · P0 " + metrics.p0CutSource + cutText + " · " + metrics.axisCenters + "/5 CENTROS";
   maskCenterValue.textContent = metrics.centerX.toFixed(1) + " / " + metrics.centerY.toFixed(1) + " px";
   maskWidthValue.textContent = metrics.widthPx.toFixed(1) + " px";
   maskCoverageValue.textContent = (metrics.coverage * 100).toFixed(1) + "% · " + metrics.pixelCount + " px";
