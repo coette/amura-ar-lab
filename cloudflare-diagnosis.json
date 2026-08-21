@@ -1,12 +1,12 @@
 {
-  "generatedAt": "2026-08-20T20:04:00.955Z",
-  "githubSha": "e3cec0c2fd70b3d71d20800475a36b72d996fa48",
+  "generatedAt": "2026-08-21T04:28:14.096Z",
+  "githubSha": "0554273144aca504a4a1fe1fe105d578e5f9626d",
   "local": {
-    "siteTitle": "AMURA · AUTORRESCATE · R17.1",
-    "distTitle": "AMURA · AUTORRESCATE · R17.1",
+    "siteTitle": "AMURA · WRIST RIG · R18.1.0",
+    "distTitle": "AMURA · WRIST RIG · R18.1.0",
     "siteEqualsDist": true,
-    "siteHasR171": true,
-    "distHasR171": true
+    "siteHasR181": true,
+    "distHasR181": true
   },
   "project": {
     "name": "amura-engine-2",
@@ -14,17 +14,17 @@
     "subdomain": "amura-engine-2.pages.dev",
     "source": null,
     "latestDeployment": {
-      "id": "60b71e2b-a3d5-4b37-aadf-b3609e306a2a",
-      "url": "https://60b71e2b.amura-engine-2.pages.dev",
+      "id": "dd9b64f5-d12e-49c3-9a48-b11e94cc17b2",
+      "url": "https://dd9b64f5.amura-engine-2.pages.dev",
       "aliases": null,
-      "created_on": "2026-08-20T20:03:55.687472Z",
+      "created_on": "2026-08-21T04:26:18.214503Z",
       "environment": "production",
       "trigger": {
         "type": "ad_hoc",
         "metadata": {
           "branch": "main",
-          "commit_hash": "e3cec0c2fd70b3d71d20800475a36b72d996fa48",
-          "commit_message": "Diagnose bare versus cache-busted Cloudflare HTML",
+          "commit_hash": "dd997aaedac15d26063780742ae785fe566340ba",
+          "commit_message": "Deploy R18.1 wrist tester to production",
           "commit_dirty": true
         }
       }
@@ -34,377 +34,98 @@
     "requestedUrl": "https://amura-engine-2.pages.dev/",
     "status": 200,
     "finalUrl": "https://amura-engine-2.pages.dev/",
-    "title": "AMURA · AUTORRESCATE · R17.1",
-    "eyebrow": "LABORATORIO · R17.1",
-    "hasR171": true,
-    "hasR17": true,
-    "hasR16": true,
-    "bytes": 6784,
+    "title": "AMURA · WRIST RIG · R18.1.0",
+    "eyebrow": "LABORATORIO · R18.1.0",
+    "hasR181": true,
+    "hasR17": false,
+    "hasR16": false,
+    "bytes": 6938,
     "headers": {
       "cacheControl": "no-store, no-cache, must-revalidate, max-age=0",
       "cfCacheStatus": null,
       "age": null,
       "etag": null,
       "lastModified": null,
-      "cfRay": "a2e401324f7314c7-SJC"
+      "cfRay": "a2e6e3cc6c60282c-IAD"
     },
-    "head": "<!doctype html>\n<html lang=\"es\">\n<head>\n<meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1, viewport-fit=cover\"><meta name=\"theme-color\" content=\"#000000\"><meta name=\"apple-mobile-web-app-capable\" content=\"yes\"><meta name=\"apple-mobile-web-app-status-bar-style\" content=\"black-translucent\"><meta name=\"apple-mobile-web-app-title\" content=\"AMURA R17.1\"><meta name=\"mobile-web-app-capable\" content=\"yes\">\n<title>AMURA · AUTORRESCATE · R17.1</title>\n<link rel=\"mani"
+    "head": "<!doctype html>\n<html lang=\"es\">\n<head>\n<meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1, viewport-fit=cover\"><meta name=\"theme-color\" content=\"#000000\"><meta name=\"apple-mobile-web-app-capable\" content=\"yes\"><meta name=\"apple-mobile-web-app-status-bar-style\" content=\"black-translucent\"><meta name=\"apple-mobile-web-app-title\" content=\"AMURA R18.1\"><meta name=\"mobile-web-app-capable\" content=\"yes\">\n<title>AMURA · WRIST RIG · R18.1.0</title>\n<link rel=\"manif"
   },
   "publicMainBusted": {
-    "requestedUrl": "https://amura-engine-2.pages.dev/?diag=1787256241158",
+    "requestedUrl": "https://amura-engine-2.pages.dev/?diag=1787286494285",
     "status": 200,
-    "finalUrl": "https://amura-engine-2.pages.dev/?diag=1787256241158",
-    "title": "AMURA · AUTORRESCATE · R17.1",
-    "eyebrow": "LABORATORIO · R17.1",
-    "hasR171": true,
-    "hasR17": true,
-    "hasR16": true,
-    "bytes": 6784,
+    "finalUrl": "https://amura-engine-2.pages.dev/?diag=1787286494285",
+    "title": "AMURA · WRIST RIG · R18.1.0",
+    "eyebrow": "LABORATORIO · R18.1.0",
+    "hasR181": true,
+    "hasR17": false,
+    "hasR16": false,
+    "bytes": 6938,
     "headers": {
       "cacheControl": "no-store, no-cache, must-revalidate, max-age=0",
       "cfCacheStatus": null,
       "age": null,
       "etag": null,
       "lastModified": null,
-      "cfRay": "a2e401334b3114c7-SJC"
+      "cfRay": "a2e6e3cd4ee9282c-IAD"
     },
-    "head": "<!doctype html>\n<html lang=\"es\">\n<head>\n<meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1, viewport-fit=cover\"><meta name=\"theme-color\" content=\"#000000\"><meta name=\"apple-mobile-web-app-capable\" content=\"yes\"><meta name=\"apple-mobile-web-app-status-bar-style\" content=\"black-translucent\"><meta name=\"apple-mobile-web-app-title\" content=\"AMURA R17.1\"><meta name=\"mobile-web-app-capable\" content=\"yes\">\n<title>AMURA · AUTORRESCATE · R17.1</title>\n<link rel=\"mani"
+    "head": "<!doctype html>\n<html lang=\"es\">\n<head>\n<meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1, viewport-fit=cover\"><meta name=\"theme-color\" content=\"#000000\"><meta name=\"apple-mobile-web-app-capable\" content=\"yes\"><meta name=\"apple-mobile-web-app-status-bar-style\" content=\"black-translucent\"><meta name=\"apple-mobile-web-app-title\" content=\"AMURA R18.1\"><meta name=\"mobile-web-app-capable\" content=\"yes\">\n<title>AMURA · WRIST RIG · R18.1.0</title>\n<link rel=\"manif"
   },
+  "deploymentCount": 1,
   "deployments": [
     {
-      "id": "60b71e2b-a3d5-4b37-aadf-b3609e306a2a",
-      "created_on": "2026-08-20T20:03:55.687472Z",
+      "id": "dd9b64f5-d12e-49c3-9a48-b11e94cc17b2",
+      "created_on": "2026-08-21T04:26:18.214503Z",
       "environment": "production",
-      "url": "https://60b71e2b.amura-engine-2.pages.dev",
+      "url": "https://dd9b64f5.amura-engine-2.pages.dev",
       "aliases": null,
       "trigger": {
         "type": "ad_hoc",
         "metadata": {
           "branch": "main",
-          "commit_hash": "e3cec0c2fd70b3d71d20800475a36b72d996fa48",
-          "commit_message": "Diagnose bare versus cache-busted Cloudflare HTML",
+          "commit_hash": "dd997aaedac15d26063780742ae785fe566340ba",
+          "commit_message": "Deploy R18.1 wrist tester to production",
           "commit_dirty": true
         }
       },
       "servedBare": {
-        "requestedUrl": "https://60b71e2b.amura-engine-2.pages.dev/",
+        "requestedUrl": "https://dd9b64f5.amura-engine-2.pages.dev/",
         "status": 200,
-        "finalUrl": "https://60b71e2b.amura-engine-2.pages.dev/",
-        "title": "AMURA · AUTORRESCATE · R17.1",
-        "eyebrow": "LABORATORIO · R17.1",
-        "hasR171": true,
-        "hasR17": true,
-        "hasR16": true,
-        "bytes": 6784,
+        "finalUrl": "https://dd9b64f5.amura-engine-2.pages.dev/",
+        "title": "AMURA · WRIST RIG · R18.1.0",
+        "eyebrow": "LABORATORIO · R18.1.0",
+        "hasR181": true,
+        "hasR17": false,
+        "hasR16": false,
+        "bytes": 6938,
         "headers": {
           "cacheControl": "no-store, no-cache, must-revalidate, max-age=0",
           "cfCacheStatus": null,
           "age": null,
           "etag": null,
           "lastModified": null,
-          "cfRay": "a2e401339d58cf1a-SJC"
+          "cfRay": "a2e6e3cdbf93c9a7-IAD"
         },
-        "head": "<!doctype html>\n<html lang=\"es\">\n<head>\n<meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1, viewport-fit=cover\"><meta name=\"theme-color\" content=\"#000000\"><meta name=\"apple-mobile-web-app-capable\" content=\"yes\"><meta name=\"apple-mobile-web-app-status-bar-style\" content=\"black-translucent\"><meta name=\"apple-mobile-web-app-title\" content=\"AMURA R17.1\"><meta name=\"mobile-web-app-capable\" content=\"yes\">\n<title>AMURA · AUTORRESCATE · R17.1</title>\n<link rel=\"mani"
+        "head": "<!doctype html>\n<html lang=\"es\">\n<head>\n<meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1, viewport-fit=cover\"><meta name=\"theme-color\" content=\"#000000\"><meta name=\"apple-mobile-web-app-capable\" content=\"yes\"><meta name=\"apple-mobile-web-app-status-bar-style\" content=\"black-translucent\"><meta name=\"apple-mobile-web-app-title\" content=\"AMURA R18.1\"><meta name=\"mobile-web-app-capable\" content=\"yes\">\n<title>AMURA · WRIST RIG · R18.1.0</title>\n<link rel=\"manif"
       },
       "servedBusted": {
-        "requestedUrl": "https://60b71e2b.amura-engine-2.pages.dev/?diag=1787256241414",
+        "requestedUrl": "https://dd9b64f5.amura-engine-2.pages.dev/?diag=1787286494376",
         "status": 200,
-        "finalUrl": "https://60b71e2b.amura-engine-2.pages.dev/?diag=1787256241414",
-        "title": "AMURA · AUTORRESCATE · R17.1",
-        "eyebrow": "LABORATORIO · R17.1",
-        "hasR171": true,
-        "hasR17": true,
-        "hasR16": true,
-        "bytes": 6784,
+        "finalUrl": "https://dd9b64f5.amura-engine-2.pages.dev/?diag=1787286494376",
+        "title": "AMURA · WRIST RIG · R18.1.0",
+        "eyebrow": "LABORATORIO · R18.1.0",
+        "hasR181": true,
+        "hasR17": false,
+        "hasR16": false,
+        "bytes": 6938,
         "headers": {
           "cacheControl": "no-store, no-cache, must-revalidate, max-age=0",
           "cfCacheStatus": null,
           "age": null,
           "etag": null,
           "lastModified": null,
-          "cfRay": "a2e40134d939cf1a-SJC"
+          "cfRay": "a2e6e3cddffec9a7-IAD"
         },
-        "head": "<!doctype html>\n<html lang=\"es\">\n<head>\n<meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1, viewport-fit=cover\"><meta name=\"theme-color\" content=\"#000000\"><meta name=\"apple-mobile-web-app-capable\" content=\"yes\"><meta name=\"apple-mobile-web-app-status-bar-style\" content=\"black-translucent\"><meta name=\"apple-mobile-web-app-title\" content=\"AMURA R17.1\"><meta name=\"mobile-web-app-capable\" content=\"yes\">\n<title>AMURA · AUTORRESCATE · R17.1</title>\n<link rel=\"mani"
-      }
-    },
-    {
-      "id": "fd7246e5-f995-431c-9fd2-839c6cb04735",
-      "created_on": "2026-08-20T19:59:30.281309Z",
-      "environment": "production",
-      "url": "https://fd7246e5.amura-engine-2.pages.dev",
-      "aliases": null,
-      "trigger": {
-        "type": "ad_hoc",
-        "metadata": {
-          "branch": "main",
-          "commit_hash": "30a7558c7b519b963a9800d3c44269fb1577f0ad",
-          "commit_message": "Prevent stale AMURA lab HTML caching",
-          "commit_dirty": true
-        }
-      },
-      "servedBare": {
-        "requestedUrl": "https://fd7246e5.amura-engine-2.pages.dev/",
-        "status": 200,
-        "finalUrl": "https://fd7246e5.amura-engine-2.pages.dev/",
-        "title": "AMURA · AUTORRESCATE · R17.1",
-        "eyebrow": "LABORATORIO · R17.1",
-        "hasR171": true,
-        "hasR17": true,
-        "hasR16": true,
-        "bytes": 6784,
-        "headers": {
-          "cacheControl": "no-store, no-cache, must-revalidate, max-age=0",
-          "cfCacheStatus": null,
-          "age": null,
-          "etag": null,
-          "lastModified": null,
-          "cfRay": "a2e401353cc01ff0-SJC"
-        },
-        "head": "<!doctype html>\n<html lang=\"es\">\n<head>\n<meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1, viewport-fit=cover\"><meta name=\"theme-color\" content=\"#000000\"><meta name=\"apple-mobile-web-app-capable\" content=\"yes\"><meta name=\"apple-mobile-web-app-status-bar-style\" content=\"black-translucent\"><meta name=\"apple-mobile-web-app-title\" content=\"AMURA R17.1\"><meta name=\"mobile-web-app-capable\" content=\"yes\">\n<title>AMURA · AUTORRESCATE · R17.1</title>\n<link rel=\"mani"
-      },
-      "servedBusted": {
-        "requestedUrl": "https://fd7246e5.amura-engine-2.pages.dev/?diag=1787256241517",
-        "status": 200,
-        "finalUrl": "https://fd7246e5.amura-engine-2.pages.dev/?diag=1787256241517",
-        "title": "AMURA · AUTORRESCATE · R17.1",
-        "eyebrow": "LABORATORIO · R17.1",
-        "hasR171": true,
-        "hasR17": true,
-        "hasR16": true,
-        "bytes": 6784,
-        "headers": {
-          "cacheControl": "no-store, no-cache, must-revalidate, max-age=0",
-          "cfCacheStatus": null,
-          "age": null,
-          "etag": null,
-          "lastModified": null,
-          "cfRay": "a2e401358d7b1ff0-SJC"
-        },
-        "head": "<!doctype html>\n<html lang=\"es\">\n<head>\n<meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1, viewport-fit=cover\"><meta name=\"theme-color\" content=\"#000000\"><meta name=\"apple-mobile-web-app-capable\" content=\"yes\"><meta name=\"apple-mobile-web-app-status-bar-style\" content=\"black-translucent\"><meta name=\"apple-mobile-web-app-title\" content=\"AMURA R17.1\"><meta name=\"mobile-web-app-capable\" content=\"yes\">\n<title>AMURA · AUTORRESCATE · R17.1</title>\n<link rel=\"mani"
-      }
-    },
-    {
-      "id": "91d07ad7-8a4a-4fa8-b199-151d1a086948",
-      "created_on": "2026-08-20T19:57:52.230837Z",
-      "environment": "production",
-      "url": "https://91d07ad7.amura-engine-2.pages.dev",
-      "aliases": null,
-      "trigger": {
-        "type": "ad_hoc",
-        "metadata": {
-          "branch": "main",
-          "commit_hash": "137280ba1a2b40464ca1da0fd7007dbeb352837c",
-          "commit_message": "Fix Cloudflare diagnosis Node module error",
-          "commit_dirty": true
-        }
-      },
-      "servedBare": {
-        "requestedUrl": "https://91d07ad7.amura-engine-2.pages.dev/",
-        "status": 200,
-        "finalUrl": "https://91d07ad7.amura-engine-2.pages.dev/",
-        "title": "AMURA · AUTORRESCATE · R17.1",
-        "eyebrow": "LABORATORIO · R17.1",
-        "hasR171": true,
-        "hasR17": true,
-        "hasR16": true,
-        "bytes": 6784,
-        "headers": {
-          "cacheControl": "public, max-age=0, must-revalidate",
-          "cfCacheStatus": null,
-          "age": null,
-          "etag": null,
-          "lastModified": null,
-          "cfRay": "a2e40135ee52ceb5-SJC"
-        },
-        "head": "<!doctype html>\n<html lang=\"es\">\n<head>\n<meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1, viewport-fit=cover\"><meta name=\"theme-color\" content=\"#000000\"><meta name=\"apple-mobile-web-app-capable\" content=\"yes\"><meta name=\"apple-mobile-web-app-status-bar-style\" content=\"black-translucent\"><meta name=\"apple-mobile-web-app-title\" content=\"AMURA R17.1\"><meta name=\"mobile-web-app-capable\" content=\"yes\">\n<title>AMURA · AUTORRESCATE · R17.1</title>\n<link rel=\"mani"
-      },
-      "servedBusted": {
-        "requestedUrl": "https://91d07ad7.amura-engine-2.pages.dev/?diag=1787256241635",
-        "status": 200,
-        "finalUrl": "https://91d07ad7.amura-engine-2.pages.dev/?diag=1787256241635",
-        "title": "AMURA · AUTORRESCATE · R17.1",
-        "eyebrow": "LABORATORIO · R17.1",
-        "hasR171": true,
-        "hasR17": true,
-        "hasR16": true,
-        "bytes": 6784,
-        "headers": {
-          "cacheControl": "public, max-age=0, must-revalidate",
-          "cfCacheStatus": null,
-          "age": null,
-          "etag": null,
-          "lastModified": null,
-          "cfRay": "a2e401363e7bceb5-SJC"
-        },
-        "head": "<!doctype html>\n<html lang=\"es\">\n<head>\n<meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1, viewport-fit=cover\"><meta name=\"theme-color\" content=\"#000000\"><meta name=\"apple-mobile-web-app-capable\" content=\"yes\"><meta name=\"apple-mobile-web-app-status-bar-style\" content=\"black-translucent\"><meta name=\"apple-mobile-web-app-title\" content=\"AMURA R17.1\"><meta name=\"mobile-web-app-capable\" content=\"yes\">\n<title>AMURA · AUTORRESCATE · R17.1</title>\n<link rel=\"mani"
-      }
-    },
-    {
-      "id": "51489e10-3b46-4490-9944-3edc5404d8de",
-      "created_on": "2026-08-20T19:51:05.042726Z",
-      "environment": "production",
-      "url": "https://51489e10.amura-engine-2.pages.dev",
-      "aliases": null,
-      "trigger": {
-        "type": "ad_hoc",
-        "metadata": {
-          "branch": "main",
-          "commit_hash": "031a1a9fa12e54fb4f3722c1f7924bd57a91c676",
-          "commit_message": "Add one-shot Cloudflare deployment diagnosis",
-          "commit_dirty": true
-        }
-      },
-      "servedBare": {
-        "requestedUrl": "https://51489e10.amura-engine-2.pages.dev/",
-        "status": 200,
-        "finalUrl": "https://51489e10.amura-engine-2.pages.dev/",
-        "title": "AMURA · AUTORRESCATE · R17.1",
-        "eyebrow": "LABORATORIO · R17.1",
-        "hasR171": true,
-        "hasR17": true,
-        "hasR16": true,
-        "bytes": 6784,
-        "headers": {
-          "cacheControl": "public, max-age=0, must-revalidate",
-          "cfCacheStatus": null,
-          "age": null,
-          "etag": null,
-          "lastModified": null,
-          "cfRay": "a2e401369e125fe3-SJC"
-        },
-        "head": "<!doctype html>\n<html lang=\"es\">\n<head>\n<meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1, viewport-fit=cover\"><meta name=\"theme-color\" content=\"#000000\"><meta name=\"apple-mobile-web-app-capable\" content=\"yes\"><meta name=\"apple-mobile-web-app-status-bar-style\" content=\"black-translucent\"><meta name=\"apple-mobile-web-app-title\" content=\"AMURA R17.1\"><meta name=\"mobile-web-app-capable\" content=\"yes\">\n<title>AMURA · AUTORRESCATE · R17.1</title>\n<link rel=\"mani"
-      },
-      "servedBusted": {
-        "requestedUrl": "https://51489e10.amura-engine-2.pages.dev/?diag=1787256241735",
-        "status": 200,
-        "finalUrl": "https://51489e10.amura-engine-2.pages.dev/?diag=1787256241735",
-        "title": "AMURA · AUTORRESCATE · R17.1",
-        "eyebrow": "LABORATORIO · R17.1",
-        "hasR171": true,
-        "hasR17": true,
-        "hasR16": true,
-        "bytes": 6784,
-        "headers": {
-          "cacheControl": "public, max-age=0, must-revalidate",
-          "cfCacheStatus": null,
-          "age": null,
-          "etag": null,
-          "lastModified": null,
-          "cfRay": "a2e40136deb95fe3-SJC"
-        },
-        "head": "<!doctype html>\n<html lang=\"es\">\n<head>\n<meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1, viewport-fit=cover\"><meta name=\"theme-color\" content=\"#000000\"><meta name=\"apple-mobile-web-app-capable\" content=\"yes\"><meta name=\"apple-mobile-web-app-status-bar-style\" content=\"black-translucent\"><meta name=\"apple-mobile-web-app-title\" content=\"AMURA R17.1\"><meta name=\"mobile-web-app-capable\" content=\"yes\">\n<title>AMURA · AUTORRESCATE · R17.1</title>\n<link rel=\"mani"
-      }
-    },
-    {
-      "id": "39d599d6-8ed2-4ae4-b435-782bb0a8a179",
-      "created_on": "2026-08-20T19:44:02.977084Z",
-      "environment": "production",
-      "url": "https://39d599d6.amura-engine-2.pages.dev",
-      "aliases": null,
-      "trigger": {
-        "type": "ad_hoc",
-        "metadata": {
-          "branch": "main",
-          "commit_hash": "d398d933ce571d52a9b1f0c7565008d32fd35cee",
-          "commit_message": "Remove temporary 5-minute Cloudflare deploy cron",
-          "commit_dirty": true
-        }
-      },
-      "servedBare": {
-        "requestedUrl": "https://39d599d6.amura-engine-2.pages.dev/",
-        "status": 200,
-        "finalUrl": "https://39d599d6.amura-engine-2.pages.dev/",
-        "title": "AMURA · AUTORRESCATE · R17.1",
-        "eyebrow": "LABORATORIO · R17.1",
-        "hasR171": true,
-        "hasR17": true,
-        "hasR16": true,
-        "bytes": 6784,
-        "headers": {
-          "cacheControl": "public, max-age=0, must-revalidate",
-          "cfCacheStatus": null,
-          "age": null,
-          "etag": null,
-          "lastModified": null,
-          "cfRay": "a2e401373ebecf16-SJC"
-        },
-        "head": "<!doctype html>\n<html lang=\"es\">\n<head>\n<meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1, viewport-fit=cover\"><meta name=\"theme-color\" content=\"#000000\"><meta name=\"apple-mobile-web-app-capable\" content=\"yes\"><meta name=\"apple-mobile-web-app-status-bar-style\" content=\"black-translucent\"><meta name=\"apple-mobile-web-app-title\" content=\"AMURA R17.1\"><meta name=\"mobile-web-app-capable\" content=\"yes\">\n<title>AMURA · AUTORRESCATE · R17.1</title>\n<link rel=\"mani"
-      },
-      "servedBusted": {
-        "requestedUrl": "https://39d599d6.amura-engine-2.pages.dev/?diag=1787256241834",
-        "status": 200,
-        "finalUrl": "https://39d599d6.amura-engine-2.pages.dev/?diag=1787256241834",
-        "title": "AMURA · AUTORRESCATE · R17.1",
-        "eyebrow": "LABORATORIO · R17.1",
-        "hasR171": true,
-        "hasR17": true,
-        "hasR16": true,
-        "bytes": 6784,
-        "headers": {
-          "cacheControl": "public, max-age=0, must-revalidate",
-          "cfCacheStatus": null,
-          "age": null,
-          "etag": null,
-          "lastModified": null,
-          "cfRay": "a2e401377fa0cf16-SJC"
-        },
-        "head": "<!doctype html>\n<html lang=\"es\">\n<head>\n<meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1, viewport-fit=cover\"><meta name=\"theme-color\" content=\"#000000\"><meta name=\"apple-mobile-web-app-capable\" content=\"yes\"><meta name=\"apple-mobile-web-app-status-bar-style\" content=\"black-translucent\"><meta name=\"apple-mobile-web-app-title\" content=\"AMURA R17.1\"><meta name=\"mobile-web-app-capable\" content=\"yes\">\n<title>AMURA · AUTORRESCATE · R17.1</title>\n<link rel=\"mani"
-      }
-    },
-    {
-      "id": "7bc0c251-ab73-4443-b2eb-ea64076bad96",
-      "created_on": "2026-08-20T19:43:55.710386Z",
-      "environment": "production",
-      "url": "https://7bc0c251.amura-engine-2.pages.dev",
-      "aliases": null,
-      "trigger": {
-        "type": "ad_hoc",
-        "metadata": {
-          "branch": "main",
-          "commit_hash": "0c7d0e03eb955ae3f44ca1b34408094e395dc32b",
-          "commit_message": "Add one-shot Cloudflare deployment cleanup",
-          "commit_dirty": true
-        }
-      },
-      "servedBare": {
-        "requestedUrl": "https://7bc0c251.amura-engine-2.pages.dev/",
-        "status": 200,
-        "finalUrl": "https://7bc0c251.amura-engine-2.pages.dev/",
-        "title": "AMURA · AUTORRESCATE · R17.1",
-        "eyebrow": "LABORATORIO · R17.1",
-        "hasR171": true,
-        "hasR17": true,
-        "hasR16": true,
-        "bytes": 6784,
-        "headers": {
-          "cacheControl": "public, max-age=0, must-revalidate",
-          "cfCacheStatus": null,
-          "age": null,
-          "etag": null,
-          "lastModified": null,
-          "cfRay": "a2e40137c934ae99-SJC"
-        },
-        "head": "<!doctype html>\n<html lang=\"es\">\n<head>\n<meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1, viewport-fit=cover\"><meta name=\"theme-color\" content=\"#000000\"><meta name=\"apple-mobile-web-app-capable\" content=\"yes\"><meta name=\"apple-mobile-web-app-status-bar-style\" content=\"black-translucent\"><meta name=\"apple-mobile-web-app-title\" content=\"AMURA R17.1\"><meta name=\"mobile-web-app-capable\" content=\"yes\">\n<title>AMURA · AUTORRESCATE · R17.1</title>\n<link rel=\"mani"
-      },
-      "servedBusted": {
-        "requestedUrl": "https://7bc0c251.amura-engine-2.pages.dev/?diag=1787256241931",
-        "status": 200,
-        "finalUrl": "https://7bc0c251.amura-engine-2.pages.dev/?diag=1787256241931",
-        "title": "AMURA · AUTORRESCATE · R17.1",
-        "eyebrow": "LABORATORIO · R17.1",
-        "hasR171": true,
-        "hasR17": true,
-        "hasR16": true,
-        "bytes": 6784,
-        "headers": {
-          "cacheControl": "public, max-age=0, must-revalidate",
-          "cfCacheStatus": null,
-          "age": null,
-          "etag": null,
-          "lastModified": null,
-          "cfRay": "a2e401381a76ae99-SJC"
-        },
-        "head": "<!doctype html>\n<html lang=\"es\">\n<head>\n<meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1, viewport-fit=cover\"><meta name=\"theme-color\" content=\"#000000\"><meta name=\"apple-mobile-web-app-capable\" content=\"yes\"><meta name=\"apple-mobile-web-app-status-bar-style\" content=\"black-translucent\"><meta name=\"apple-mobile-web-app-title\" content=\"AMURA R17.1\"><meta name=\"mobile-web-app-capable\" content=\"yes\">\n<title>AMURA · AUTORRESCATE · R17.1</title>\n<link rel=\"mani"
+        "head": "<!doctype html>\n<html lang=\"es\">\n<head>\n<meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1, viewport-fit=cover\"><meta name=\"theme-color\" content=\"#000000\"><meta name=\"apple-mobile-web-app-capable\" content=\"yes\"><meta name=\"apple-mobile-web-app-status-bar-style\" content=\"black-translucent\"><meta name=\"apple-mobile-web-app-title\" content=\"AMURA R18.1\"><meta name=\"mobile-web-app-capable\" content=\"yes\">\n<title>AMURA · WRIST RIG · R18.1.0</title>\n<link rel=\"manif"
       }
     }
   ]
