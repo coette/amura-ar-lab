@@ -1,0 +1,4 @@
+AMURA WRIST TESTER
+Revision: R18.1.0
+Purpose: production deployment trigger after Cloudflare cleanup
+Triggered: 2026-08-21T06:25:00+02:00
