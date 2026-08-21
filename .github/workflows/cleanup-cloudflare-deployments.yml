@@ -1,4 +1,4 @@
-name: Cleanup old Cloudflare Pages deployments
+name: Cleanup Cloudflare Pages to one deployment
 
 on:
   push:
@@ -18,7 +18,7 @@ jobs:
         with:
           node-version: '22'
 
-      - name: Keep newest 10 deployments and remove old ones
+      - name: Keep only active production deployment
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -28,17 +28,25 @@ jobs:
           const token = process.env.CLOUDFLARE_API_TOKEN;
           const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
           const project = process.env.CLOUDFLARE_PROJECT_NAME;
-          const keepCount = 10;
 
           if (!token || !accountId || !project) {
             throw new Error('Faltan credenciales/configuración de Cloudflare');
           }
 
-          const base = `https://api.cloudflare.com/client/v4/accounts/${accountId}/pages/projects/${project}/deployments`;
-          const headers = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
+          const projectUrl = `https://api.cloudflare.com/client/v4/accounts/${accountId}/pages/projects/${project}`;
+          const deploymentsUrl = `${projectUrl}/deployments`;
+          const headers = {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          };
+
+          const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
           async function cf(url, options = {}) {
-            const res = await fetch(url, { ...options, headers: { ...headers, ...(options.headers || {}) } });
+            const res = await fetch(url, {
+              ...options,
+              headers: { ...headers, ...(options.headers || {}) }
+            });
             const text = await res.text();
             let body = null;
             try { body = text ? JSON.parse(text) : null; } catch (_) {}
@@ -49,40 +57,67 @@ jobs:
             return body;
           }
 
-          const deployments = [];
-          for (let page = 1; page <= 20; page++) {
-            const body = await cf(`${base}?page=${page}&per_page=100`);
-            const batch = Array.isArray(body?.result) ? body.result : [];
-            deployments.push(...batch);
-            const totalPages = Number(body?.result_info?.total_pages || 0);
-            if (!batch.length || (totalPages && page >= totalPages) || batch.length < 100) break;
+          async function listAll() {
+            const all = [];
+            for (let page = 1; page <= 30; page++) {
+              const body = await cf(`${deploymentsUrl}?page=${page}&per_page=100`);
+              const batch = Array.isArray(body?.result) ? body.result : [];
+              all.push(...batch);
+              const totalPages = Number(body?.result_info?.total_pages || 0);
+              if (!batch.length || (totalPages && page >= totalPages) || batch.length < 100) break;
+            }
+            return all;
           }
 
-          deployments.sort((a, b) => new Date(b.created_on || 0) - new Date(a.created_on || 0));
-          console.log(`Deployments encontrados: ${deployments.length}`);
-
-          const keep = new Set(deployments.slice(0, keepCount).map(d => d.id));
-          let deleted = 0;
-          let skippedProtected = 0;
-          let failed = 0;
-
-          for (const d of deployments.slice(keepCount)) {
-            const aliases = Array.isArray(d.aliases) ? d.aliases.filter(Boolean) : [];
-            if (aliases.length) {
-              skippedProtected++;
-              console.log(`PROTEGIDO ${d.id} · aliases: ${aliases.join(', ')}`);
-              continue;
-            }
-            try {
-              await cf(`${base}/${d.id}?force=true`, { method: 'DELETE' });
-              deleted++;
-              console.log(`BORRADO ${d.id} · ${d.created_on || ''}`);
-            } catch (err) {
-              failed++;
-              console.log(`NO BORRADO ${d.id} · ${err.message}`);
-            }
+          async function activeProductionId() {
+            const body = await cf(projectUrl);
+            const id = body?.result?.latest_deployment?.id;
+            if (!id) throw new Error('Cloudflare no informa latest_deployment');
+            return id;
           }
 
-          console.log(`Resumen: conservados recientes=${Math.min(keepCount, deployments.length)}, protegidos por alias=${skippedProtected}, borrados=${deleted}, fallidos=${failed}`);
-          if (failed) process.exitCode = 1;
+          async function cleanupRound(label) {
+            const activeId = await activeProductionId();
+            const deployments = await listAll();
+            deployments.sort((a, b) => new Date(b.created_on || 0) - new Date(a.created_on || 0));
+            console.log(`${label}: encontrados=${deployments.length} · producción activa=${activeId}`);
+
+            let deleted = 0;
+            let failed = 0;
+            for (const d of deployments) {
+              if (!d?.id || d.id === activeId) continue;
+              try {
+                await cf(`${deploymentsUrl}/${d.id}?force=true`, { method: 'DELETE' });
+                deleted++;
+                console.log(`BORRADO ${d.id} · ${d.created_on || ''}`);
+              } catch (error) {
+                failed++;
+                console.log(`NO BORRADO ${d.id} · ${error.message}`);
+              }
+            }
+            console.log(`${label}: borrados=${deleted} · fallidos=${failed}`);
+            return { activeId, failed };
+          }
+
+          // Este push también dispara el deploy normal. Esperamos a que termine
+          // antes de elegir qué implementación es la producción que hay que conservar.
+          console.log('Esperando 60 s a que termine cualquier despliegue en curso...');
+          await sleep(60000);
+          await cleanupRound('RONDA 1');
+
+          // Segunda pasada para capturar cualquier deployment que hubiese terminado
+          // justo durante la primera limpieza.
+          await sleep(12000);
+          await cleanupRound('RONDA 2');
+
+          const finalActive = await activeProductionId();
+          const remaining = await listAll();
+          console.log(`FINAL: quedan=${remaining.length} · producción activa=${finalActive}`);
+          for (const d of remaining) {
+            console.log(`RESTANTE ${d.id} · ${d.created_on || ''} · ${d.environment || ''}`);
+          }
+
+          if (remaining.length !== 1 || remaining[0]?.id !== finalActive) {
+            throw new Error(`La limpieza no terminó en una sola implementación activa. Quedan ${remaining.length}.`);
+          }
           NODE
