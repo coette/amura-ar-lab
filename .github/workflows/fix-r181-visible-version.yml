@@ -1,4 +1,4 @@
-name: Fix R18.1 visible version labels
+name: Finalize R18.1.1 UI ownership
 
 on:
   push:
@@ -14,70 +14,36 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v4
-      - name: Patch only visible R16 labels and bump cache key
+      - name: Stop bank boot from rewriting main UI
         run: |
           python3 <<'PY'
           from pathlib import Path
+          p = Path('site/static-bank-player-r16.js')
+          s = p.read_text()
+          old = 'function boot(){ensure();const e=document.querySelector("#startPanel .eyebrow"),t=document.getElementById("cameraTitle"),l=document.getElementById("statusMessage"),p=document.querySelector("#startPanel .privacy");if(e)e.textContent="LABORATORIO · R18.1.1";if(t)t.textContent="RELOJ + MUÑECA SOBRE R17.2";if(l)l.textContent="Rig rígido AR-02 sobre el eje naranja. Z calibrada una vez al pulsar LISTO.";if(p)p.textContent="Muñeca transparente por defecto · cuatro modos · autorrescate compartido por todo el rig.";document.title="AMURA · WRIST RIG · R18.1.1";}'
+          new = 'function boot(){ensure();}'
+          if old not in s:
+              raise SystemExit('Expected boot() body not found; refusing to guess')
+          s = s.replace(old, new, 1)
+          p.write_text(s)
 
-          def replace(path, pairs):
-              p = Path(path)
-              s = p.read_text()
-              original = s
-              for old, new in pairs:
-                  if old not in s:
-                      print(f'WARN missing in {path}: {old}')
-                  s = s.replace(old, new)
-              if s == original:
-                  raise SystemExit(f'No changes made to {path}')
-              p.write_text(s)
-
-          replace('site/static-bank-player-r16.js', [
-              ('AMURA · R16 · POSTURA', 'AMURA · R18.1 · POSTURA'),
-              ('AMURA_R16_', 'AMURA_R18_1_'),
-              ('AMURA R16 · banco oficial', 'AMURA R18.1 · banco oficial'),
-              ('R16 · MÉTODO OFICIAL VERDE/NARANJA', 'R18.1 · BANCO GEOMÉTRICO VERDE/NARANJA'),
-              ('AMURA · BANCO OFICIAL · R16', 'AMURA · BANCO OFICIAL · R18.1.1'),
-              ('AMURA · R16', 'AMURA · WRIST RIG · R18.1.1'),
-              ('LABORATORIO · R16', 'LABORATORIO · R18.1.1'),
-              ('MÉTODO OFICIAL VERDE / NARANJA', 'RELOJ + MUÑECA SOBRE R17.2'),
-              ('Cámara y banco usan ya el mismo método ganador.', 'Rig rígido AR-02 sobre el eje naranja. Z calibrada una vez al pulsar LISTO.'),
-              ('VERDE: eje por secciones · NARANJA: final con 5 cortes y 4 centros.', 'Muñeca transparente por defecto · cuatro modos · autorrescate compartido por todo el rig.'),
-          ])
-
-          replace('site/axis-r16-live.js', [
-              ('R16 OFICIAL · VERDE: eje por secciones · NARANJA: final 5 cortes / 4 centros',
-               'R18.1 · VERDE: eje por secciones · NARANJA: final 5 cortes / 4 centros'),
-          ])
-
-          replace('site/wrist-watch-entry-r181.js', [
-              ('?v=r18.1.0', '?v=r18.1.1'),
-          ])
-
-          replace('site/index.html', [
-              ('R18.1.0', 'R18.1.1'),
-              ('?v=r18.1.0', '?v=r18.1.1'),
-          ])
-
-          # Sanity checks: no old visible identity remains in the two offending modules.
-          bank = Path('site/static-bank-player-r16.js').read_text()
-          axis = Path('site/axis-r16-live.js').read_text()
+          check = p.read_text()
           forbidden = [
-              'LABORATORIO · R16',
-              'document.title="AMURA · R16"',
-              'R16 · MÉTODO OFICIAL VERDE/NARANJA',
-              'R16 OFICIAL · VERDE:'
+              '#startPanel .eyebrow',
+              'getElementById("cameraTitle")',
+              'getElementById("statusMessage")',
+              '#startPanel .privacy'
           ]
-          joined = bank + '\n' + axis
-          bad = [x for x in forbidden if x in joined]
+          tail = check[check.index('function boot()'):]
+          bad = [x for x in forbidden if x in tail]
           if bad:
-              raise SystemExit('Visible R16 labels remain: ' + repr(bad))
-          print('R18.1.1 visible-label patch OK')
+              raise SystemExit('boot still rewrites main UI: ' + repr(bad))
+          print('boot() now only initializes bank UI')
           PY
-
-      - name: Commit corrected R18.1.1
+      - name: Commit final R18.1.1 UI fix
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add site/static-bank-player-r16.js site/axis-r16-live.js site/wrist-watch-entry-r181.js site/index.html
-          git commit -m 'R18.1.1 stop R16 modules from relabeling UI'
+          git add site/static-bank-player-r16.js
+          git commit -m 'R18.1.1 let index own main UI labels'
           git push
