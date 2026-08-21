@@ -3,6 +3,11 @@ name: Deploy AMURA AR to Cloudflare Pages
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - '.github/**'
+      - 'cleanup-result.txt'
+      - 'export-run.json'
+      - 'cloudflare-diagnosis.json'
   workflow_dispatch:
 
 concurrency:
@@ -33,84 +38,44 @@ jobs:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           command: pages deploy dist --project-name=amura-engine-2 --branch=main
 
-      - name: Keep only active production deployment
+      - name: Delete every old Cloudflare Pages deployment
+        shell: bash
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_PROJECT_NAME: amura-engine-2
         run: |
-          node <<'NODE'
-          const token = process.env.CLOUDFLARE_API_TOKEN;
-          const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
-          const project = process.env.CLOUDFLARE_PROJECT_NAME;
-          if (!token || !accountId || !project) throw new Error('Faltan credenciales/configuración de Cloudflare');
+          set -u
+          API="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/$CLOUDFLARE_PROJECT_NAME"
+          AUTH="Authorization: Bearer $CLOUDFLARE_API_TOKEN"
+          sleep 5
 
-          const headers = {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          };
-          const projectUrl = `https://api.cloudflare.com/client/v4/accounts/${accountId}/pages/projects/${project}`;
-          const deploymentsUrl = `${projectUrl}/deployments`;
+          for round in $(seq 1 20); do
+            ACTIVE=$(curl -fsS "$API" -H "$AUTH" | jq -r '.result.latest_deployment.id // empty')
+            [ -n "$ACTIVE" ] || { echo 'No active deployment id'; exit 1; }
 
-          async function cf(url, options = {}) {
-            const response = await fetch(url, {
-              ...options,
-              headers: { ...headers, ...(options.headers || {}) }
-            });
-            const text = await response.text();
-            let body = null;
-            try { body = text ? JSON.parse(text) : null; } catch (_) {}
-            if (!response.ok || (body && body.success === false)) {
-              const detail = body?.errors?.map(e => e.message).join('; ') || text || String(response.status);
-              throw new Error(`${response.status} ${detail}`);
-            }
-            return body;
-          }
+            JSON=$(curl -fsS "$API/deployments?page=1&per_page=100" -H "$AUTH")
+            TOTAL=$(printf '%s' "$JSON" | jq -r '.result_info.total_count // (.result|length)')
+            echo "Round $round · total=$TOTAL · active=$ACTIVE"
+            [ "$TOTAL" -le 1 ] && break
 
-          (async () => {
-            // Give Pages a moment to promote the direct upload as active production.
-            await new Promise(resolve => setTimeout(resolve, 7000));
+            printf '%s' "$JSON" | jq -r '.result[].id' | while read -r ID; do
+              [ -z "$ID" ] && continue
+              [ "$ID" = "$ACTIVE" ] && continue
+              RESPONSE=$(curl -sS -X DELETE "$API/deployments/$ID?force=true" -H "$AUTH")
+              SUCCESS=$(printf '%s' "$RESPONSE" | jq -r '.success // false')
+              if [ "$SUCCESS" = "true" ]; then
+                echo "DELETED $ID"
+              else
+                echo "DELETE FAILED $ID :: $(printf '%s' "$RESPONSE" | jq -c '.errors // .')"
+              fi
+              sleep 0.15
+            done
+            sleep 1
+          done
 
-            const projectBody = await cf(projectUrl);
-            const activeId = projectBody?.result?.latest_deployment?.id;
-            if (!activeId) throw new Error('Cloudflare no devolvió latest_deployment');
-            console.log(`Producción activa que se conserva: ${activeId}`);
-
-            const deployments = [];
-            for (let page = 1; page <= 50; page++) {
-              const body = await cf(`${deploymentsUrl}?page=${page}&per_page=100`);
-              const batch = Array.isArray(body?.result) ? body.result : [];
-              deployments.push(...batch);
-              const totalPages = Number(body?.result_info?.total_pages || 0);
-              if (!batch.length || (totalPages && page >= totalPages) || batch.length < 100) break;
-            }
-
-            deployments.sort((a, b) => new Date(b.created_on || 0) - new Date(a.created_on || 0));
-            console.log(`Implementaciones encontradas: ${deployments.length}`);
-
-            let deleted = 0;
-            let failed = 0;
-            for (const deployment of deployments) {
-              if (!deployment?.id || deployment.id === activeId) continue;
-              try {
-                await cf(`${deploymentsUrl}/${deployment.id}?force=true`, { method: 'DELETE' });
-                deleted++;
-                console.log(`BORRADA ${deployment.id}`);
-              } catch (error) {
-                // If Cloudflare says another deployment is active, never force past that protection.
-                if (/active production deployment/i.test(String(error.message))) {
-                  console.log(`PROTEGIDA POR CLOUDFLARE ${deployment.id}`);
-                  continue;
-                }
-                failed++;
-                console.log(`NO BORRADA ${deployment.id}: ${error.message}`);
-              }
-            }
-
-            console.log(`Limpieza terminada: conservada=1, borradas=${deleted}, fallidas=${failed}`);
-            if (failed) process.exitCode = 1;
-          })().catch(error => {
-            console.error(error);
-            process.exit(1);
-          });
-          NODE
+          FINAL=$(curl -fsS "$API/deployments?page=1&per_page=100" -H "$AUTH")
+          FINAL_TOTAL=$(printf '%s' "$FINAL" | jq -r '.result_info.total_count // (.result|length)')
+          echo "FINAL TOTAL=$FINAL_TOTAL"
+          printf '%s' "$FINAL" | jq -r '.result[] | "REMAINING \(.id) \(.created_on) \(.environment)"'
+          [ "$FINAL_TOTAL" -eq 1 ] || exit 1
